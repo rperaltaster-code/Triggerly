@@ -1,0 +1,36 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.swp
+*.sln.DotSettings.user
+TestResults/
+publish/
+
+# Secrets / config overrides
+appsettings.*.json
+!appsettings.Development.json
+secrets.json
+
+# Rider / JetBrains
+.idea/
+
+# VS Code
+.vscode/
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

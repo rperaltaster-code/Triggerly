@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-Triggerly.Worker-8fdabbf4-74c8-4756-9112-c80e29c731de</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+    <PackageReference Include="Temporalio" Version="1.4.0" />
+    <PackageReference Include="Temporalio.Extensions.Hosting" Version="1.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Triggerly.Application\Triggerly.Application.csproj" />
+    <ProjectReference Include="..\Triggerly.Infrastructure\Triggerly.Infrastructure.csproj" />
+    <ProjectReference Include="..\Triggerly.Shared\Triggerly.Shared.csproj" />
+  </ItemGroup>
+</Project>

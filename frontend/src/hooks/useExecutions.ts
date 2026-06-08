@@ -1,0 +1,50 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { executionsApi } from '../api/executions'
+import type { ExecutionStatus } from '../types'
+
+export const executionKeys = {
+  all: ['executions'] as const,
+  list: (params?: object) => [...executionKeys.all, 'list', params] as const,
+  detail: (id: string) => [...executionKeys.all, id] as const,
+}
+
+export function useExecutions(params?: { page?: number; pageSize?: number; workflowId?: string; status?: ExecutionStatus }) {
+  return useQuery({
+    queryKey: executionKeys.list(params),
+    queryFn: () => executionsApi.list(params),
+    refetchInterval: 5000,
+  })
+}
+
+export function useExecution(id: string) {
+  return useQuery({
+    queryKey: executionKeys.detail(id),
+    queryFn: () => executionsApi.getById(id),
+    enabled: !!id,
+    refetchInterval: 3000,
+  })
+}
+
+export function useApproveExecution() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: executionsApi.approve,
+    onSuccess: () => qc.invalidateQueries({ queryKey: executionKeys.all }),
+  })
+}
+
+export function useRejectExecution() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => executionsApi.reject(id, reason),
+    onSuccess: () => qc.invalidateQueries({ queryKey: executionKeys.all }),
+  })
+}
+
+export function useCancelExecution() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: executionsApi.cancel,
+    onSuccess: () => qc.invalidateQueries({ queryKey: executionKeys.all }),
+  })
+}
