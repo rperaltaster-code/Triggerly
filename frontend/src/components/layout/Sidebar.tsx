@@ -1,6 +1,7 @@
-import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, GitBranch, Zap, Activity, Settings } from 'lucide-react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { LayoutDashboard, GitBranch, Zap, Activity, Settings, LogOut } from 'lucide-react'
 import { clsx } from 'clsx'
+import { useAuth } from '../../contexts/AuthContext'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -11,6 +12,21 @@ const navItems = [
 ]
 
 export function Sidebar() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
+  const initials = user?.name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) ?? '?'
+
   return (
     <aside className="w-64 min-h-screen bg-gray-900 text-white flex flex-col">
       <div className="px-6 py-5 border-b border-gray-700">
@@ -44,13 +60,20 @@ export function Sidebar() {
 
       <div className="px-4 py-4 border-t border-gray-700">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold">
-            T
+          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold flex-shrink-0">
+            {initials}
           </div>
-          <div>
-            <p className="text-sm font-medium">Demo Tenant</p>
-            <p className="text-xs text-gray-400">tenant-demo</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{user?.name ?? 'Unknown'}</p>
+            <p className="text-xs text-gray-400 truncate">{user?.email ?? ''}</p>
           </div>
+          <button
+            onClick={handleLogout}
+            className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+            title="Sign out"
+          >
+            <LogOut size={15} />
+          </button>
         </div>
       </div>
     </aside>

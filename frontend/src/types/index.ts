@@ -1,3 +1,10 @@
+export interface AuthUser {
+  id: string
+  name: string
+  email: string
+  tenantId: string
+}
+
 export type WorkflowStatus = 'Draft' | 'Active' | 'Inactive' | 'Archived'
 export type ExecutionStatus =
   | 'Pending' | 'Running' | 'WaitingApproval' | 'Approved'

@@ -8,6 +8,7 @@ public class AppDbContext : DbContext, IUnitOfWork
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+    public DbSet<User> Users => Set<User>();
     public DbSet<WorkflowDefinition> Workflows => Set<WorkflowDefinition>();
     public DbSet<WorkflowStep> WorkflowSteps => Set<WorkflowStep>();
     public DbSet<AutomationRule> AutomationRules => Set<AutomationRule>();
