@@ -87,4 +87,28 @@ public class WorkflowsController : ControllerBase
     }
 }
 
+    [HttpPut("{id:guid}/steps")]
+    public async Task<IActionResult> SaveSteps(
+        Guid id,
+        [FromBody] SaveStepsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var command = new SaveWorkflowStepsCommand(
+            id, DemoTenantId,
+            request.Steps.Select(s => new StepDefinition(
+                s.Name, s.Type, s.Order, s.Config ?? [], s.ApproverEmail)).ToList());
+
+        var result = await _mediator.Send(command, cancellationToken);
+        return Ok(result);
+    }
+}
+
 public record TriggerWorkflowRequest(Dictionary<string, object>? InputData);
+
+public record SaveStepsRequest(List<StepRequest> Steps);
+public record StepRequest(
+    string Name,
+    string Type,
+    int Order,
+    Dictionary<string, object>? Config,
+    string? ApproverEmail);

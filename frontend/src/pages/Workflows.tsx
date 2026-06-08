@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Plus, Play, Power, Trash2, Search } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Plus, Play, Power, Trash2, Search, PenSquare } from 'lucide-react'
 import { useWorkflows, useActivateWorkflow, useDeleteWorkflow, useTriggerWorkflow } from '../hooks/useWorkflows'
 import { Badge } from '../components/ui/Badge'
 import { formatDistanceToNow } from 'date-fns'
 
 export function Workflows() {
   const [search, setSearch] = useState('')
+  const navigate = useNavigate()
   const { data, isLoading } = useWorkflows({ search: search || undefined })
   const activate = useActivateWorkflow()
   const deleteWf = useDeleteWorkflow()
@@ -70,6 +71,13 @@ export function Workflows() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 justify-end">
+                      <button
+                        onClick={() => navigate(`/workflows/${wf.id}/builder`)}
+                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                        title="Open Builder"
+                      >
+                        <PenSquare size={15} />
+                      </button>
                       {wf.status === 'Active' && (
                         <button
                           onClick={() => trigger.mutate({ id: wf.id })}

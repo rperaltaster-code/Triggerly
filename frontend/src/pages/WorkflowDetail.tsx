@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { Play, Power, ArrowLeft, GitBranch } from 'lucide-react'
+import { Play, Power, ArrowLeft, GitBranch, PenSquare } from 'lucide-react'
 import { useWorkflow, useActivateWorkflow, useTriggerWorkflow } from '../hooks/useWorkflows'
 import { Badge } from '../components/ui/Badge'
 import { format } from 'date-fns'
@@ -38,6 +38,12 @@ export function WorkflowDetail() {
           {workflow.description && <p className="text-gray-500 mt-0.5">{workflow.description}</p>}
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => navigate(`/workflows/${workflow.id}/builder`)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
+          >
+            <PenSquare size={15} /> Open Builder
+          </button>
           {workflow.status === 'Draft' && (
             <button
               onClick={() => activate.mutate(workflow.id)}
