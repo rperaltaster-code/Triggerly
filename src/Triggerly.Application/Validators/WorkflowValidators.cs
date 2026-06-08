@@ -9,8 +9,6 @@ public class CreateWorkflowCommandValidator : AbstractValidator<CreateWorkflowCo
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Description).MaximumLength(1000);
-        RuleFor(x => x.TenantId).NotEmpty();
-        RuleFor(x => x.CreatedBy).NotEmpty();
         RuleForEach(x => x.Steps).ChildRules(step =>
         {
             step.RuleFor(s => s.Name).NotEmpty().MaximumLength(200);
