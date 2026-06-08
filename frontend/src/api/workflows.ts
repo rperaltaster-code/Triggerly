@@ -22,4 +22,9 @@ export const workflowsApi = {
 
   trigger: (id: string, inputData?: Record<string, unknown>) =>
     api.post<WorkflowExecution>(`/workflows/${id}/trigger`, { inputData }).then((r) => r.data),
+
+  saveSteps: (
+    id: string,
+    steps: { name: string; type: string; order: number; config: Record<string, unknown>; approverEmail?: string | null }[],
+  ) => api.put<Workflow>(`/workflows/${id}/steps`, { steps }).then((r) => r.data),
 }
