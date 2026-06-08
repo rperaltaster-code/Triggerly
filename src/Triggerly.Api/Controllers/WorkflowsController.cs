@@ -41,10 +41,10 @@ public class WorkflowsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateWorkflowCommand command, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Create([FromBody] CreateWorkflowRequest request, CancellationToken cancellationToken = default)
     {
-        var commandWithTenant = command with { TenantId = TenantId, CreatedBy = UserId };
-        var result = await _mediator.Send(commandWithTenant, cancellationToken);
+        var command = new CreateWorkflowCommand(request.Name, request.Description ?? string.Empty, TenantId, UserId, []);
+        var result = await _mediator.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
@@ -104,6 +104,7 @@ public class WorkflowsController : ControllerBase
     }
 }
 
+public record CreateWorkflowRequest(string Name, string? Description);
 public record TriggerWorkflowRequest(Dictionary<string, object>? InputData);
 
 public record SaveStepsRequest(List<StepRequest> Steps);
