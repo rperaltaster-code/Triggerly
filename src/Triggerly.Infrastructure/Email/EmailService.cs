@@ -19,7 +19,7 @@ public class EmailService : IEmailService
 
     public async Task SendAsync(string to, string subject, string htmlBody, CancellationToken cancellationToken = default)
     {
-        var enabled = _configuration.GetValue<bool>("Email:Enabled");
+        var enabled = bool.TryParse(_configuration["Email:Enabled"], out var e) && e;
 
         if (!enabled)
         {
@@ -31,7 +31,7 @@ public class EmailService : IEmailService
 
         var host = _configuration["Email:SmtpHost"]
             ?? throw new InvalidOperationException("Email:SmtpHost is not configured.");
-        var port = _configuration.GetValue<int>("Email:SmtpPort", 587);
+        var port = int.TryParse(_configuration["Email:SmtpPort"], out var p) ? p : 587;
         var username = _configuration["Email:Username"];
         var password = _configuration["Email:Password"];
         var fromAddress = _configuration["Email:FromAddress"] ?? "noreply@triggerly.io";

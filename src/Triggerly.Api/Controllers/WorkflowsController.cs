@@ -85,7 +85,6 @@ public class WorkflowsController : ControllerBase
             new TriggerWorkflowCommand(id, DemoTenantId, DemoUserId, request.InputData), cancellationToken);
         return Ok(result);
     }
-}
 
     [HttpPut("{id:guid}/steps")]
     public async Task<IActionResult> SaveSteps(

@@ -80,5 +80,7 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
             execution.CurrentStepName,
             execution.StartedAt,
             execution.CompletedAt,
+            execution.SlaBreachedAt,
+            [],
             []);
 }
