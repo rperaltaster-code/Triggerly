@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Temporalio.Client;
 using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Interfaces;
+using Triggerly.Infrastructure.Auth; // PasswordHasher only — TokenService lives in Api (needs JwtBearer)
 using Triggerly.Infrastructure.Email;
 using Triggerly.Infrastructure.Persistence;
 using Triggerly.Infrastructure.Repositories;
@@ -34,6 +35,8 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ITemporalService, TemporalService>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<IUserRepository, UserRepository>();
 
         return services;
     }

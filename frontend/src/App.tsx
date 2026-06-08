@@ -1,6 +1,9 @@
-import { Routes, Route } from 'react-router-dom'
+import { Navigate, Routes, Route } from 'react-router-dom'
 import { AppLayout } from './components/layout/AppLayout'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { Dashboard } from './pages/Dashboard'
+import { Login } from './pages/Login'
+import { Register } from './pages/Register'
 import { Workflows } from './pages/Workflows'
 import { WorkflowDetail } from './pages/WorkflowDetail'
 import { WorkflowBuilder } from './pages/WorkflowBuilder'
@@ -8,12 +11,23 @@ import { Executions } from './pages/Executions'
 import { ExecutionDetail } from './pages/ExecutionDetail'
 import { AutomationRules } from './pages/AutomationRules'
 
-export default function App() {
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuth()
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
+}
+
+function AppRoutes() {
   return (
     <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+
       {/* Builder is full-screen — outside AppLayout */}
-      <Route path="/workflows/:id/builder" element={<WorkflowBuilder />} />
-      <Route element={<AppLayout />}>
+      <Route path="/workflows/:id/builder" element={
+        <RequireAuth><WorkflowBuilder /></RequireAuth>
+      } />
+
+      <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/workflows" element={<Workflows />} />
         <Route path="/workflows/:id" element={<WorkflowDetail />} />
@@ -22,5 +36,13 @@ export default function App() {
         <Route path="/automation" element={<AutomationRules />} />
       </Route>
     </Routes>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   )
 }
