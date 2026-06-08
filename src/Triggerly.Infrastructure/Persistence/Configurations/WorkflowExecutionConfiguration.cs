@@ -35,11 +35,29 @@ public class WorkflowExecutionConfiguration : IEntityTypeConfiguration<WorkflowE
             .HasForeignKey(s => s.ExecutionId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasMany(e => e.Comments)
+            .WithOne()
+            .HasForeignKey(c => c.ExecutionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => new { e.TenantId, e.Status });
         builder.HasIndex(e => e.TemporalWorkflowId).IsUnique();
 
         builder.Ignore(e => e.Workflow);
+    }
+}
+
+public class ExecutionCommentConfiguration : IEntityTypeConfiguration<ExecutionComment>
+{
+    public void Configure(EntityTypeBuilder<ExecutionComment> builder)
+    {
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.TenantId).IsRequired().HasMaxLength(100);
+        builder.Property(c => c.AuthorId).IsRequired().HasMaxLength(200);
+        builder.Property(c => c.AuthorName).IsRequired().HasMaxLength(200);
+        builder.Property(c => c.Content).IsRequired().HasMaxLength(4000);
+        builder.HasIndex(c => c.ExecutionId);
     }
 }
 

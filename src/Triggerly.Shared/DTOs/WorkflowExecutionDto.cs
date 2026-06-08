@@ -18,7 +18,9 @@ public record WorkflowExecutionDto(
     string? CurrentStepName,
     DateTime StartedAt,
     DateTime? CompletedAt,
-    List<ExecutionStepDto> Steps
+    DateTime? SlaBreachedAt,
+    List<ExecutionStepDto> Steps,
+    List<ExecutionCommentDto> Comments
 );
 
 public record ExecutionStepDto(
@@ -31,6 +33,15 @@ public record ExecutionStepDto(
     string? ErrorMessage,
     DateTime? StartedAt,
     DateTime? CompletedAt
+);
+
+public record ExecutionCommentDto(
+    Guid Id,
+    Guid ExecutionId,
+    string AuthorId,
+    string AuthorName,
+    string Content,
+    DateTime CreatedAt
 );
 
 public record DashboardStatsDto(

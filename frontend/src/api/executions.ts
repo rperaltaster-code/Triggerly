@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { WorkflowExecution, PagedResult, ExecutionStatus } from '../types'
+import type { WorkflowExecution, ExecutionComment, PagedResult, ExecutionStatus } from '../types'
 
 export const executionsApi = {
   list: (params?: { page?: number; pageSize?: number; workflowId?: string; status?: ExecutionStatus }) =>
@@ -14,4 +14,10 @@ export const executionsApi = {
     api.post(`/executions/${id}/reject`, { reason }),
 
   cancel: (id: string) => api.post(`/executions/${id}/cancel`),
+
+  getComments: (id: string) =>
+    api.get<ExecutionComment[]>(`/executions/${id}/comments`).then((r) => r.data),
+
+  addComment: (id: string, content: string) =>
+    api.post<ExecutionComment>(`/executions/${id}/comments`, { content }).then((r) => r.data),
 }

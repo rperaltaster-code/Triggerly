@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Temporalio.Client;
 using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Interfaces;
+using Triggerly.Infrastructure.Email;
 using Triggerly.Infrastructure.Persistence;
 using Triggerly.Infrastructure.Repositories;
 using Triggerly.Infrastructure.Temporal;
@@ -32,6 +33,7 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddScoped<ITemporalService, TemporalService>();
+        services.AddScoped<IEmailService, EmailService>();
 
         return services;
     }

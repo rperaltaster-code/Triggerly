@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Triggerly.Application.Commands.Executions;
 using Triggerly.Application.Commands.Workflows;
 using Triggerly.Application.Queries.Executions;
 using Triggerly.Shared.Models;
@@ -56,6 +57,25 @@ public class ExecutionsController : ControllerBase
         await _mediator.Send(new CancelExecutionCommand(id, DemoTenantId), cancellationToken);
         return NoContent();
     }
+
+    [HttpGet("{id:guid}/comments")]
+    public async Task<IActionResult> GetComments(Guid id, CancellationToken cancellationToken = default)
+    {
+        var execution = await _mediator.Send(new GetExecutionByIdQuery(id, DemoTenantId), cancellationToken);
+        if (execution is null) return NotFound();
+        return Ok(execution.Comments);
+    }
+
+    [HttpPost("{id:guid}/comments")]
+    public async Task<IActionResult> AddComment(
+        Guid id, [FromBody] AddCommentRequest request, CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(
+            new AddCommentCommand(id, DemoTenantId, DemoUserId, "Demo User", request.Content),
+            cancellationToken);
+        return CreatedAtAction(nameof(GetComments), new { id }, result);
+    }
 }
 
 public record RejectRequest(string Reason);
+public record AddCommentRequest(string Content);

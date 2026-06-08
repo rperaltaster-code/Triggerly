@@ -13,6 +13,7 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<AutomationRule> AutomationRules => Set<AutomationRule>();
     public DbSet<WorkflowExecution> Executions => Set<WorkflowExecution>();
     public DbSet<ExecutionStep> ExecutionSteps => Set<ExecutionStep>();
+    public DbSet<ExecutionComment> ExecutionComments => Set<ExecutionComment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

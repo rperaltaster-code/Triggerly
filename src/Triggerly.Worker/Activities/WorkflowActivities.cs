@@ -100,4 +100,15 @@ public class WorkflowActivities
         await _executionRepository.UpdateAsync(execution);
         await _unitOfWork.SaveChangesAsync();
     }
+
+    [Activity]
+    public async Task MarkSlaBreachedAsync(Guid executionId)
+    {
+        var execution = await _executionRepository.GetByIdAsync(executionId);
+        if (execution is null) return;
+
+        execution.MarkSlaBreached();
+        await _executionRepository.UpdateAsync(execution);
+        await _unitOfWork.SaveChangesAsync();
+    }
 }

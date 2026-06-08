@@ -63,6 +63,15 @@ export interface ExecutionStep {
   completedAt: string | null
 }
 
+export interface ExecutionComment {
+  id: string
+  executionId: string
+  authorId: string
+  authorName: string
+  content: string
+  createdAt: string
+}
+
 export interface WorkflowExecution {
   id: string
   workflowId: string
@@ -79,7 +88,9 @@ export interface WorkflowExecution {
   currentStepName: string | null
   startedAt: string
   completedAt: string | null
+  slaBreachedAt: string | null
   steps: ExecutionStep[]
+  comments: ExecutionComment[]
 }
 
 export interface PagedResult<T> {

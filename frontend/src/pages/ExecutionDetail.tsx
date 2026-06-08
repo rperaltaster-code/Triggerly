@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react'
-import { useExecution, useApproveExecution, useRejectExecution } from '../hooks/useExecutions'
+import { ArrowLeft, CheckCircle, XCircle, Clock, AlertTriangle, MessageSquare, Send } from 'lucide-react'
+import { useExecution, useApproveExecution, useRejectExecution, useAddComment } from '../hooks/useExecutions'
 import { Badge } from '../components/ui/Badge'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import type { ExecutionStatus } from '../types'
 
 const stepStatusIcon: Record<ExecutionStatus, React.ReactNode> = {
@@ -23,9 +24,18 @@ export function ExecutionDetail() {
   const { data: execution, isLoading } = useExecution(id!)
   const approve = useApproveExecution()
   const reject = useRejectExecution()
+  const addComment = useAddComment(id!)
+  const [commentText, setCommentText] = useState('')
 
   if (isLoading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>
   if (!execution) return <div className="text-center py-12 text-gray-500">Execution not found</div>
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!commentText.trim()) return
+    await addComment.mutateAsync(commentText.trim())
+    setCommentText('')
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -34,9 +44,15 @@ export function ExecutionDetail() {
           <ArrowLeft size={18} />
         </button>
         <div className="flex-1">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-gray-900">{execution.workflowName}</h1>
             <Badge status={execution.status} />
+            {execution.slaBreachedAt && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                <AlertTriangle size={11} />
+                SLA Breached
+              </span>
+            )}
           </div>
           <p className="text-gray-400 text-sm font-mono mt-0.5">{execution.temporalWorkflowId}</p>
         </div>
@@ -75,6 +91,19 @@ export function ExecutionDetail() {
         ))}
       </div>
 
+      {execution.slaBreachedAt && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
+          <AlertTriangle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-red-700">SLA Breached</p>
+            <p className="text-sm text-red-600 mt-0.5">
+              Approval SLA was breached at {format(new Date(execution.slaBreachedAt), 'MMM d, yyyy HH:mm:ss')}.
+              The approver has been notified by email.
+            </p>
+          </div>
+        </div>
+      )}
+
       {execution.errorMessage && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-sm font-medium text-red-700">Error</p>
@@ -100,6 +129,60 @@ export function ExecutionDetail() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Comments */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <MessageSquare size={18} className="text-gray-500" />
+          <h2 className="font-semibold text-gray-800">
+            Comments
+            {execution.comments.length > 0 && (
+              <span className="ml-2 text-xs font-normal text-gray-400">({execution.comments.length})</span>
+            )}
+          </h2>
+        </div>
+
+        {execution.comments.length === 0 ? (
+          <p className="text-gray-400 text-sm mb-4">No comments yet.</p>
+        ) : (
+          <div className="space-y-4 mb-4">
+            {execution.comments.map((comment) => (
+              <div key={comment.id} className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-700 text-xs font-semibold">
+                  {comment.authorName.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-sm font-medium text-gray-900">{comment.authorName}</span>
+                    <span className="text-xs text-gray-400">
+                      {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700 mt-0.5 whitespace-pre-wrap">{comment.content}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <form onSubmit={handleAddComment} className="flex gap-2 pt-4 border-t border-gray-100">
+          <input
+            type="text"
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            placeholder="Add a comment..."
+            className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            disabled={!commentText.trim() || addComment.isPending}
+            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Send size={14} />
+            {addComment.isPending ? 'Posting...' : 'Post'}
+          </button>
+        </form>
       </div>
 
       {Object.keys(execution.inputData).length > 0 && (

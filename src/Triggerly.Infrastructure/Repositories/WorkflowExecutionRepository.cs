@@ -15,11 +15,13 @@ public class WorkflowExecutionRepository : IWorkflowExecutionRepository
     public Task<WorkflowExecution?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         _context.Executions
             .Include(e => e.Steps)
+            .Include(e => e.Comments)
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
 
     public Task<WorkflowExecution?> GetByTemporalIdAsync(string temporalWorkflowId, CancellationToken cancellationToken = default) =>
         _context.Executions
             .Include(e => e.Steps)
+            .Include(e => e.Comments)
             .FirstOrDefaultAsync(e => e.TemporalWorkflowId == temporalWorkflowId, cancellationToken);
 
     public async Task<(IReadOnlyList<WorkflowExecution> Items, int TotalCount)> GetPagedAsync(

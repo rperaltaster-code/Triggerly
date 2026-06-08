@@ -5,6 +5,7 @@ namespace Triggerly.Domain.Entities;
 public class WorkflowExecution
 {
     private readonly List<ExecutionStep> _steps = [];
+    private readonly List<ExecutionComment> _comments = [];
 
     public Guid Id { get; private set; }
     public Guid WorkflowId { get; private set; }
@@ -20,9 +21,11 @@ public class WorkflowExecution
     public string? CurrentStepName { get; private set; }
     public DateTime StartedAt { get; private set; }
     public DateTime? CompletedAt { get; private set; }
+    public DateTime? SlaBreachedAt { get; private set; }
 
     public WorkflowDefinition? Workflow { get; private set; }
     public IReadOnlyList<ExecutionStep> Steps => _steps.AsReadOnly();
+    public IReadOnlyList<ExecutionComment> Comments => _comments.AsReadOnly();
 
     private WorkflowExecution() { }
 
@@ -101,10 +104,22 @@ public class WorkflowExecution
         CompletedAt = DateTime.UtcNow;
     }
 
+    public void MarkSlaBreached()
+    {
+        SlaBreachedAt = DateTime.UtcNow;
+    }
+
     public ExecutionStep AddStep(Guid stepId, string stepName, int order)
     {
         var executionStep = ExecutionStep.Create(Id, stepId, stepName, order);
         _steps.Add(executionStep);
         return executionStep;
+    }
+
+    public ExecutionComment AddComment(string authorId, string authorName, string content)
+    {
+        var comment = ExecutionComment.Create(Id, TenantId, authorId, authorName, content);
+        _comments.Add(comment);
+        return comment;
     }
 }

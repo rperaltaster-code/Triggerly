@@ -48,3 +48,11 @@ export function useCancelExecution() {
     onSuccess: () => qc.invalidateQueries({ queryKey: executionKeys.all }),
   })
 }
+
+export function useAddComment(executionId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (content: string) => executionsApi.addComment(executionId, content),
+    onSuccess: () => qc.invalidateQueries({ queryKey: executionKeys.detail(executionId) }),
+  })
+}

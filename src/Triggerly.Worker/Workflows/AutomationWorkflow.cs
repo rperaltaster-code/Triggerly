@@ -51,24 +51,61 @@ public class AutomationWorkflow : IAutomationWorkflow
                     case "Approval":
                         _currentStatus = $"Awaiting approval: {step.Name}";
 
+                        var slaHours = step.Config.TryGetValue("slaHours", out var h)
+                            ? Convert.ToInt32(h) : 72;
+
                         await Workflow.ExecuteActivityAsync(
                             (WorkflowActivities act) => act.RequestApprovalAsync(
                                 input.ExecutionId, step.Id, step.Name, step.ApproverEmail),
                             activityOptions);
 
+                        if (!string.IsNullOrEmpty(step.ApproverEmail))
+                        {
+                            await Workflow.ExecuteActivityAsync(
+                                (NotificationActivities act) => act.SendApprovalRequestNotificationAsync(
+                                    step.ApproverEmail, step.Name,
+                                    input.ExecutionId.ToString(), input.WorkflowDefinitionId.ToString()),
+                                activityOptions);
+                        }
+
                         var approved = await Workflow.WaitConditionAsync(
                             () => _approvalSignal != null,
-                            TimeSpan.FromHours(72));
+                            TimeSpan.FromHours(slaHours));
 
-                        if (!approved || _approvalSignal?.Approved == false)
+                        if (!approved)
                         {
-                            var reason = _approvalSignal?.Reason ?? "Timed out waiting for approval";
+                            var timeoutReason = $"SLA timeout: no response within {slaHours} hours";
+                            _currentStatus = "TimedOut";
+
+                            await Workflow.ExecuteActivityAsync(
+                                (WorkflowActivities act) => act.MarkSlaBreachedAsync(input.ExecutionId),
+                                activityOptions);
+
+                            if (!string.IsNullOrEmpty(step.ApproverEmail))
+                            {
+                                await Workflow.ExecuteActivityAsync(
+                                    (NotificationActivities act) => act.SendSlaBreachNotificationAsync(
+                                        step.ApproverEmail, step.Name,
+                                        input.ExecutionId.ToString(), slaHours),
+                                    activityOptions);
+                            }
+
+                            await Workflow.ExecuteActivityAsync(
+                                (WorkflowActivities act) => act.CompleteStepAsync(
+                                    input.ExecutionId, step.Id, false, timeoutReason),
+                                activityOptions);
+                            return new AutomationWorkflowResult(false, context, timeoutReason);
+                        }
+
+                        if (_approvalSignal?.Approved == false)
+                        {
+                            var rejectReason = _approvalSignal.Reason ?? "Rejected";
                             _currentStatus = "Rejected";
                             await Workflow.ExecuteActivityAsync(
                                 (WorkflowActivities act) => act.CompleteStepAsync(
-                                    input.ExecutionId, step.Id, false, reason),
+                                    input.ExecutionId, step.Id, false, rejectReason),
                                 activityOptions);
-                            return new AutomationWorkflowResult(false, context, reason);
+                            return new AutomationWorkflowResult(false, context, rejectReason);
                         }
 
                         _approvalSignal = null;
