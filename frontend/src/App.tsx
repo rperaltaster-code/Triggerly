@@ -6,6 +6,7 @@ import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 import { Workflows } from './pages/Workflows'
 import { WorkflowDetail } from './pages/WorkflowDetail'
+import { WorkflowNew } from './pages/WorkflowNew'
 import { WorkflowBuilder } from './pages/WorkflowBuilder'
 import { Executions } from './pages/Executions'
 import { ExecutionDetail } from './pages/ExecutionDetail'
@@ -30,6 +31,7 @@ function AppRoutes() {
       <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/workflows" element={<Workflows />} />
+        <Route path="/workflows/new" element={<WorkflowNew />} />
         <Route path="/workflows/:id" element={<WorkflowDetail />} />
         <Route path="/executions" element={<Executions />} />
         <Route path="/executions/:id" element={<ExecutionDetail />} />
