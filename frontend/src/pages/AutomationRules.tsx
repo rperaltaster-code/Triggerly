@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { Plus, Toggle, Trash2, Zap } from 'lucide-react'
+import { Plus, Trash2, Zap } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { automationRulesApi } from '../api/automationRules'
 import { Badge } from '../components/ui/Badge'
 import { formatDistanceToNow } from 'date-fns'
+import { NewRuleModal } from '../components/automationRules/NewRuleModal'
 
 export function AutomationRules() {
   const qc = useQueryClient()
+  const [showNewModal, setShowNewModal] = useState(false)
   const { data, isLoading } = useQuery({
     queryKey: ['automation-rules'],
     queryFn: () => automationRulesApi.list(),
@@ -32,7 +34,10 @@ export function AutomationRules() {
           <h1 className="text-2xl font-bold text-gray-900">Automation Rules</h1>
           <p className="text-gray-500 mt-1">Configure triggers that automatically start workflows</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+        <button
+          onClick={() => setShowNewModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+        >
           <Plus size={16} /> New Rule
         </button>
       </div>
@@ -95,5 +100,7 @@ export function AutomationRules() {
         </div>
       )}
     </div>
+
+      {showNewModal && <NewRuleModal onClose={() => setShowNewModal(false)} />}
   )
 }
