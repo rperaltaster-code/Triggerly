@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle, Clock, ChevronDown, ChevronRight } from 'lucide-react'
 import { useExecutions, useApproveExecution, useRejectExecution } from '../hooks/useExecutions'
@@ -101,6 +101,13 @@ export function Approvals() {
   const approve = useApproveExecution()
   const reject = useRejectExecution()
   const [rejectTarget, setRejectTarget] = useState<WorkflowExecution | null>(null)
+
+  // Auto-close modal if its execution is no longer pending (approved elsewhere / polling update)
+  useEffect(() => {
+    if (rejectTarget && data && !data.items.some(ex => ex.id === rejectTarget.id)) {
+      setRejectTarget(null)
+    }
+  }, [data, rejectTarget])
 
   const handleRejectConfirm = async (_id: string, reason: string) => {
     await reject.mutateAsync({ id: rejectTarget!.id, reason })

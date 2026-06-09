@@ -36,8 +36,8 @@ public class StubTemporalService : ITemporalService
             await using var scope = _scopeFactory.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var execution = await db.Executions.FirstOrDefaultAsync(e => e.Id == executionId);
-            if (execution is null) return;
+            var exists = await db.Executions.AnyAsync(e => e.Id == executionId);
+            if (!exists) return;
 
             // Only auto-complete if the workflow has no approval step; otherwise
             // leave it in WaitingApproval so the user can approve/reject via the UI.
@@ -45,11 +45,15 @@ public class StubTemporalService : ITemporalService
                 .AnyAsync(s => s.WorkflowId == workflowDefinitionId && s.Type == StepType.Approval);
 
             if (hasApprovalStep)
-                execution.RequestApproval();
+                await db.Executions
+                    .Where(e => e.Id == executionId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(e => e.Status, ExecutionStatus.WaitingApproval));
             else
-                execution.Complete(null);
-
-            await db.SaveChangesAsync();
+                await db.Executions
+                    .Where(e => e.Id == executionId)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(e => e.Status, ExecutionStatus.Completed)
+                        .SetProperty(e => e.CompletedAt, DateTime.UtcNow));
         });
 
         return Task.FromResult(fakeRunId);
