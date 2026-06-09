@@ -32,8 +32,9 @@ export function ExecutionDetail() {
   if (isLoading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>
   if (!execution) return <div className="text-center py-12 text-gray-500">Execution not found</div>
 
-  const handleRejectConfirm = (execId: string, reason: string) => {
-    reject.mutate({ id: execId, reason }, { onSuccess: () => setShowRejectModal(false) })
+  const handleRejectConfirm = async (execId: string, reason: string) => {
+    await reject.mutateAsync({ id: execId, reason })
+    setShowRejectModal(false)
   }
 
   const handleAddComment = async (e: React.FormEvent) => {

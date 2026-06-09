@@ -116,7 +116,7 @@ export function Executions() {
         <RejectModal
           executionId={rejectTarget.id}
           workflowName={rejectTarget.workflowName}
-          onConfirm={(id, reason) => reject.mutate({ id, reason }, { onSuccess: () => setRejectTarget(null) })}
+          onConfirm={async (id, reason) => { await reject.mutateAsync({ id, reason }); setRejectTarget(null) }}
           onClose={() => setRejectTarget(null)}
           isPending={reject.isPending}
         />

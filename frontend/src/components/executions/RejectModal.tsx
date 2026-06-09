@@ -4,7 +4,7 @@ import { X, XCircle, Loader2 } from 'lucide-react'
 interface Props {
   executionId: string
   workflowName: string
-  onConfirm: (id: string, reason: string) => void
+  onConfirm: (id: string, reason: string) => void | Promise<void>
   onClose: () => void
   isPending?: boolean
 }

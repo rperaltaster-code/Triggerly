@@ -102,8 +102,9 @@ export function Approvals() {
   const reject = useRejectExecution()
   const [rejectTarget, setRejectTarget] = useState<WorkflowExecution | null>(null)
 
-  const handleRejectConfirm = (_id: string, reason: string) => {
-    reject.mutate({ id: rejectTarget!.id, reason }, { onSuccess: () => setRejectTarget(null) })
+  const handleRejectConfirm = async (_id: string, reason: string) => {
+    await reject.mutateAsync({ id: rejectTarget!.id, reason })
+    setRejectTarget(null)
   }
 
   return (
