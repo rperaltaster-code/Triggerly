@@ -1,4 +1,5 @@
 using MediatR;
+using Triggerly.Domain.Entities;
 using Triggerly.Domain.Interfaces;
 using Triggerly.Shared.DTOs;
 
@@ -25,14 +26,15 @@ public class AddCommentCommandHandler : IRequestHandler<AddCommentCommand, Execu
 
     public async Task<ExecutionCommentDto> Handle(AddCommentCommand request, CancellationToken cancellationToken)
     {
-        var execution = await _repository.GetByIdAsync(request.ExecutionId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Execution {request.ExecutionId} not found.");
+        var exists = await _repository.ExistsAsync(request.ExecutionId, request.TenantId, cancellationToken);
+        if (!exists)
+            throw new KeyNotFoundException($"Execution {request.ExecutionId} not found.");
 
-        if (execution.TenantId != request.TenantId)
-            throw new UnauthorizedAccessException("Access denied.");
+        var comment = ExecutionComment.Create(
+            request.ExecutionId, request.TenantId,
+            request.AuthorId, request.AuthorName, request.Content);
 
-        var comment = execution.AddComment(request.AuthorId, request.AuthorName, request.Content);
-        await _repository.UpdateAsync(execution, cancellationToken);
+        await _repository.AddCommentAsync(comment, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new ExecutionCommentDto(
