@@ -39,7 +39,8 @@ public class AutomationRuleRepository : IAutomationRuleRepository
 
     public Task UpdateAsync(AutomationRule rule, CancellationToken cancellationToken = default)
     {
-        _context.AutomationRules.Update(rule);
+        if (_context.Entry(rule).State == Microsoft.EntityFrameworkCore.EntityState.Detached)
+            _context.AutomationRules.Update(rule);
         return Task.CompletedTask;
     }
 
