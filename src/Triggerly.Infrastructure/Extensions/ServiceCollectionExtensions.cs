@@ -8,6 +8,7 @@ using Triggerly.Infrastructure.Auth; // PasswordHasher only — TokenService liv
 using Triggerly.Infrastructure.Email;
 using Triggerly.Infrastructure.Persistence;
 using Triggerly.Infrastructure.Repositories;
+using Triggerly.Infrastructure.Services;
 using Triggerly.Infrastructure.Temporal;
 
 namespace Triggerly.Infrastructure.Extensions;
@@ -37,6 +38,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<IAuditService, AuditService>();
 
         return services;
     }

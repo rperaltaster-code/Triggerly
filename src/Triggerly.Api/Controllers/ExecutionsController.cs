@@ -17,6 +17,7 @@ public class ExecutionsController : ControllerBase
     private readonly IMediator _mediator;
     private string TenantId => User.FindFirstValue("tenantId") ?? throw new UnauthorizedAccessException("Missing tenantId claim.");
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Missing user claim.");
+    private string UserName => User.FindFirstValue(ClaimTypes.Name) ?? "Unknown";
 
     public ExecutionsController(IMediator mediator) => _mediator = mediator;
 
@@ -43,21 +44,21 @@ public class ExecutionsController : ControllerBase
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve(Guid id, CancellationToken cancellationToken = default)
     {
-        await _mediator.Send(new ApproveExecutionCommand(id, UserId, TenantId), cancellationToken);
+        await _mediator.Send(new ApproveExecutionCommand(id, UserId, UserName, TenantId), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("{id:guid}/reject")]
     public async Task<IActionResult> Reject(Guid id, [FromBody] RejectRequest request, CancellationToken cancellationToken = default)
     {
-        await _mediator.Send(new RejectExecutionCommand(id, UserId, request.Reason, TenantId), cancellationToken);
+        await _mediator.Send(new RejectExecutionCommand(id, UserId, UserName, request.Reason, TenantId), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken cancellationToken = default)
     {
-        await _mediator.Send(new CancelExecutionCommand(id, TenantId), cancellationToken);
+        await _mediator.Send(new CancelExecutionCommand(id, TenantId, UserId, UserName), cancellationToken);
         return NoContent();
     }
 

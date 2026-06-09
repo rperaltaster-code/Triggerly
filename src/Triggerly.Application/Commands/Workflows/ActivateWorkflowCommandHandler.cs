@@ -1,4 +1,5 @@
 using MediatR;
+using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Interfaces;
 
 namespace Triggerly.Application.Commands.Workflows;
@@ -7,11 +8,13 @@ public class ActivateWorkflowCommandHandler : IRequestHandler<ActivateWorkflowCo
 {
     private readonly IWorkflowRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditService _audit;
 
-    public ActivateWorkflowCommandHandler(IWorkflowRepository repository, IUnitOfWork unitOfWork)
+    public ActivateWorkflowCommandHandler(IWorkflowRepository repository, IUnitOfWork unitOfWork, IAuditService audit)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _audit = audit;
     }
 
     public async Task Handle(ActivateWorkflowCommand request, CancellationToken cancellationToken)
@@ -25,6 +28,10 @@ public class ActivateWorkflowCommandHandler : IRequestHandler<ActivateWorkflowCo
         workflow.Activate();
         await _repository.UpdateAsync(workflow, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _audit.LogAsync(request.TenantId, request.UserId, request.UserName,
+            "WorkflowActivated", "Workflow", workflow.Id.ToString(), workflow.Name,
+            ct: cancellationToken);
     }
 }
 
@@ -32,11 +39,13 @@ public class DeactivateWorkflowCommandHandler : IRequestHandler<DeactivateWorkfl
 {
     private readonly IWorkflowRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditService _audit;
 
-    public DeactivateWorkflowCommandHandler(IWorkflowRepository repository, IUnitOfWork unitOfWork)
+    public DeactivateWorkflowCommandHandler(IWorkflowRepository repository, IUnitOfWork unitOfWork, IAuditService audit)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _audit = audit;
     }
 
     public async Task Handle(DeactivateWorkflowCommand request, CancellationToken cancellationToken)
@@ -50,6 +59,10 @@ public class DeactivateWorkflowCommandHandler : IRequestHandler<DeactivateWorkfl
         workflow.Deactivate();
         await _repository.UpdateAsync(workflow, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _audit.LogAsync(request.TenantId, request.UserId, request.UserName,
+            "WorkflowDeactivated", "Workflow", workflow.Id.ToString(), workflow.Name,
+            ct: cancellationToken);
     }
 }
 
@@ -57,11 +70,13 @@ public class DeleteWorkflowCommandHandler : IRequestHandler<DeleteWorkflowComman
 {
     private readonly IWorkflowRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditService _audit;
 
-    public DeleteWorkflowCommandHandler(IWorkflowRepository repository, IUnitOfWork unitOfWork)
+    public DeleteWorkflowCommandHandler(IWorkflowRepository repository, IUnitOfWork unitOfWork, IAuditService audit)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _audit = audit;
     }
 
     public async Task Handle(DeleteWorkflowCommand request, CancellationToken cancellationToken)
@@ -74,5 +89,9 @@ public class DeleteWorkflowCommandHandler : IRequestHandler<DeleteWorkflowComman
 
         await _repository.DeleteAsync(request.Id, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _audit.LogAsync(request.TenantId, request.UserId, request.UserName,
+            "WorkflowDeleted", "Workflow", workflow.Id.ToString(), workflow.Name,
+            ct: cancellationToken);
     }
 }

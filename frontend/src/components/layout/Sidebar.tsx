@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, GitBranch, Zap, Activity, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, GitBranch, Zap, Activity, Settings, LogOut, Shield } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -8,6 +8,7 @@ const navItems = [
   { to: '/workflows', label: 'Workflows', icon: GitBranch },
   { to: '/automation', label: 'Automation Rules', icon: Zap },
   { to: '/executions', label: 'Executions', icon: Activity },
+  { to: '/audit', label: 'Audit Log', icon: Shield },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
