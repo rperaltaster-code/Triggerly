@@ -12,4 +12,6 @@ public interface IAutomationRuleRepository
     Task AddAsync(AutomationRule rule, CancellationToken cancellationToken = default);
     Task UpdateAsync(AutomationRule rule, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AutomationRule>> GetEnabledScheduleRulesAsync(CancellationToken cancellationToken = default);
+    Task RecordTriggerAsync(Guid id, CancellationToken cancellationToken = default);
 }
