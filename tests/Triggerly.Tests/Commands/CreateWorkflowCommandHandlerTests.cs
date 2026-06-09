@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Moq;
 using Triggerly.Application.Commands.Workflows;
+using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Entities;
 using Triggerly.Domain.Interfaces;
 using Triggerly.Shared.Models;
@@ -12,11 +13,19 @@ public class CreateWorkflowCommandHandlerTests
 {
     private readonly Mock<IWorkflowRepository> _repositoryMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
+    private readonly Mock<IAuditService> _auditMock = new();
     private readonly CreateWorkflowCommandHandler _handler;
 
     public CreateWorkflowCommandHandlerTests()
     {
-        _handler = new CreateWorkflowCommandHandler(_repositoryMock.Object, _unitOfWorkMock.Object);
+        _auditMock.Setup(a => a.LogAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _handler = new CreateWorkflowCommandHandler(
+            _repositoryMock.Object, _unitOfWorkMock.Object, _auditMock.Object);
     }
 
     [Fact]
@@ -27,6 +36,7 @@ public class CreateWorkflowCommandHandlerTests
             "Automated invoice approval workflow",
             "tenant-1",
             "user-1",
+            "Test User",
             [
                 new CreateWorkflowStepRequest("Validate Invoice", StepType.Action, 0, null, null),
                 new CreateWorkflowStepRequest("Manager Approval", StepType.Approval, 1, null, "manager@company.com"),
@@ -51,7 +61,7 @@ public class CreateWorkflowCommandHandlerTests
     [Fact]
     public async Task Handle_WithNoSteps_CreatesWorkflowWithEmptySteps()
     {
-        var command = new CreateWorkflowCommand("Empty Workflow", "", "tenant-1", "user-1", []);
+        var command = new CreateWorkflowCommand("Empty Workflow", "", "tenant-1", "user-1", "Test User", []);
 
         _repositoryMock.Setup(r => r.AddAsync(It.IsAny<WorkflowDefinition>(), default))
             .Returns(Task.CompletedTask);
@@ -66,7 +76,7 @@ public class CreateWorkflowCommandHandlerTests
     [Fact]
     public async Task Handle_PersistsWorkflow()
     {
-        var command = new CreateWorkflowCommand("Test", "Desc", "tenant-1", "user-1", []);
+        var command = new CreateWorkflowCommand("Test", "Desc", "tenant-1", "user-1", "Test User", []);
         _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(1);
 
         await _handler.Handle(command, CancellationToken.None);
