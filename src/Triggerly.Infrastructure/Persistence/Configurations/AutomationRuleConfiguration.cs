@@ -17,6 +17,7 @@ public class AutomationRuleConfiguration : IEntityTypeConfiguration<AutomationRu
 
         builder.HasIndex(r => r.TenantId);
         builder.HasIndex(r => r.WorkflowId);
+        builder.HasIndex(r => r.WebhookToken).IsUnique();
 
         builder.Ignore(r => r.Workflow);
     }

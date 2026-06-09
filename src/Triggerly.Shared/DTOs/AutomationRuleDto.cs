@@ -14,5 +14,6 @@ public record AutomationRuleDto(
     string TenantId,
     int ExecutionCount,
     DateTime? LastTriggeredAt,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? WebhookToken = null
 );

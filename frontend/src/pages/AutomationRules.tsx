@@ -1,10 +1,28 @@
 import { useState } from 'react'
-import { Plus, Trash2, Zap } from 'lucide-react'
+import { Plus, Trash2, Zap, Copy, Check } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { automationRulesApi } from '../api/automationRules'
 import { Badge } from '../components/ui/Badge'
 import { formatDistanceToNow } from 'date-fns'
 import { NewRuleModal } from '../components/automationRules/NewRuleModal'
+
+function WebhookUrl({ token }: { token: string }) {
+  const [copied, setCopied] = useState(false)
+  const url = `${window.location.origin}/api/webhooks/${token}`
+  const copy = () => {
+    navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg max-w-xl">
+      <span className="text-xs font-mono text-gray-600 truncate flex-1">{url}</span>
+      <button onClick={copy} className="shrink-0 text-gray-400 hover:text-gray-700 transition-colors">
+        {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+      </button>
+    </div>
+  )
+}
 
 export function AutomationRules() {
   const qc = useQueryClient()
@@ -70,6 +88,9 @@ export function AutomationRules() {
                         <span>Last: <span className="font-medium text-gray-600">{formatDistanceToNow(new Date(rule.lastTriggeredAt), { addSuffix: true })}</span></span>
                       )}
                     </div>
+                    {rule.triggerType === 'Webhook' && rule.webhookToken && (
+                      <WebhookUrl token={rule.webhookToken} />
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

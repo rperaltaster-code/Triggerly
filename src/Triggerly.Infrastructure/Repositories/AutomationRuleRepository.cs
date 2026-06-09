@@ -50,6 +50,9 @@ public class AutomationRuleRepository : IAutomationRuleRepository
         if (rule is not null) _context.AutomationRules.Remove(rule);
     }
 
+    public Task<AutomationRule?> GetByWebhookTokenAsync(string token, CancellationToken cancellationToken = default) =>
+        _context.AutomationRules.FirstOrDefaultAsync(r => r.WebhookToken == token, cancellationToken);
+
     public async Task<IReadOnlyList<AutomationRule>> GetEnabledScheduleRulesAsync(CancellationToken cancellationToken = default) =>
         await _context.AutomationRules
             .Where(r => r.IsEnabled && r.TriggerType == Triggerly.Shared.Models.TriggerType.Schedule)

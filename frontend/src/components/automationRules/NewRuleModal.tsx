@@ -43,7 +43,10 @@ export function NewRuleModal({ onClose }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    create.mutate({ name, description, triggerType, triggerConfig: triggerConfig || '{}', workflowId })
+    const config = triggerType === 'Schedule' && triggerConfig.trim()
+      ? JSON.stringify({ cron: triggerConfig.trim() })
+      : triggerConfig || '{}'
+    create.mutate({ name, description, triggerType, triggerConfig: config, workflowId })
   }
 
   return (
