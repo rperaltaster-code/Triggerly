@@ -26,6 +26,7 @@ function BuilderCanvas() {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [initialized, setInitialized] = useState(false)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [rfInstance, setRfInstance] = useState<ReturnType<typeof import('@xyflow/react').useReactFlow> | null>(null)
@@ -131,8 +132,8 @@ function BuilderCanvas() {
   const handleSave = async () => {
     if (!id) return
     setSaving(true)
+    setSaveError('')
     try {
-      // Sort nodes by Y position to determine step order
       const sortedNodes = [...nodes].sort((a, b) => a.position.y - b.position.y)
       const steps = sortedNodes.map((node, i) => {
         const data = node.data as StepNodeData
@@ -147,6 +148,8 @@ function BuilderCanvas() {
       await workflowsApi.saveSteps(id, steps)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to save')
     } finally {
       setSaving(false)
     }
@@ -179,9 +182,13 @@ function BuilderCanvas() {
           <h1 className="font-semibold text-gray-900 text-sm">{workflow?.name}</h1>
           <p className="text-xs text-gray-400">{nodes.length} step{nodes.length !== 1 ? 's' : ''}</p>
         </div>
-        <p className="text-xs text-gray-400 hidden sm:block">
-          Drag steps from the palette → drop on canvas → click to configure
-        </p>
+        {saveError ? (
+          <p className="text-xs text-red-500 hidden sm:block">{saveError}</p>
+        ) : (
+          <p className="text-xs text-gray-400 hidden sm:block">
+            Drag steps from the palette → drop on canvas → click to configure
+          </p>
+        )}
         <button
           onClick={handleSave}
           disabled={saving}
