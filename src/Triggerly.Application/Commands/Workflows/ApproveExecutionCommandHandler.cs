@@ -33,6 +33,7 @@ public class ApproveExecutionCommandHandler : IRequestHandler<ApproveExecutionCo
             throw new InvalidOperationException("Execution is not awaiting approval.");
 
         await _repository.SetStatusAsync(request.ExecutionId, ExecutionStatus.Approved, null, null, cancellationToken);
+        await _repository.CompleteCurrentStepAsync(request.ExecutionId, true, null, cancellationToken);
         await _temporalService.SendApprovalSignalAsync(
             execution.TemporalWorkflowId, true, request.ActorId, cancellationToken: cancellationToken);
 
@@ -70,6 +71,7 @@ public class RejectExecutionCommandHandler : IRequestHandler<RejectExecutionComm
             throw new InvalidOperationException("Execution is not awaiting approval.");
 
         await _repository.SetStatusAsync(request.ExecutionId, ExecutionStatus.Rejected, request.Reason, DateTime.UtcNow, cancellationToken);
+        await _repository.CompleteCurrentStepAsync(request.ExecutionId, false, request.Reason, cancellationToken);
         await _temporalService.SendApprovalSignalAsync(
             execution.TemporalWorkflowId, false, request.ActorId, request.Reason, cancellationToken);
 
