@@ -1,4 +1,5 @@
 using MediatR;
+using Triggerly.Domain.Entities;
 using Triggerly.Domain.Interfaces;
 using Triggerly.Shared.DTOs;
 using Triggerly.Shared.Models;
@@ -32,38 +33,42 @@ public class SaveWorkflowStepsCommandHandler : IRequestHandler<SaveWorkflowSteps
 
     public async Task<WorkflowDto> Handle(SaveWorkflowStepsCommand request, CancellationToken cancellationToken)
     {
-        var workflow = await _repository.GetByIdWithStepsAsync(request.WorkflowId, cancellationToken)
+        // Load workflow without steps to avoid navigation property tracking conflicts
+        var workflow = await _repository.GetByIdAsync(request.WorkflowId, cancellationToken)
             ?? throw new KeyNotFoundException($"Workflow {request.WorkflowId} not found.");
 
         if (workflow.TenantId != request.TenantId)
             throw new UnauthorizedAccessException("Access denied.");
 
+        // Delete existing steps at DbSet level and flush — separate from the insert
         await _repository.RemoveAllStepsAsync(request.WorkflowId, cancellationToken);
-        workflow.ClearSteps();
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // Build new step entities directly (no navigation property involvement)
+        var newSteps = new List<WorkflowStep>();
         foreach (var def in request.Steps)
         {
             if (!Enum.TryParse<StepType>(def.Type, out var stepType))
                 throw new ArgumentException($"Unknown step type: '{def.Type}'");
 
-            var step = workflow.AddStep(def.Name, stepType, def.Order, def.Config);
-
+            var step = WorkflowStep.Create(request.WorkflowId, def.Name, stepType, def.Order, def.Config);
             if (!string.IsNullOrEmpty(def.ApproverEmail))
                 step.SetApprover(def.ApproverEmail);
+            newSteps.Add(step);
         }
 
         // Wire up sequential next-step links by order
-        var ordered = workflow.Steps.OrderBy(s => s.Order).ToList();
+        var ordered = newSteps.OrderBy(s => s.Order).ToList();
         for (int i = 0; i < ordered.Count - 1; i++)
             ordered[i].SetNextStep(ordered[i + 1].Id);
 
-        await _repository.UpdateAsync(workflow, cancellationToken);
+        await _repository.AddStepsAsync(newSteps, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new WorkflowDto(
             workflow.Id, workflow.Name, workflow.Description, workflow.Status,
             workflow.TenantId, workflow.Version,
-            workflow.Steps.Select(s => new WorkflowStepDto(
+            newSteps.OrderBy(s => s.Order).Select(s => new WorkflowStepDto(
                 s.Id, s.Name, s.Type, s.Order, s.Config, s.NextStepId)).ToList(),
             workflow.CreatedAt, workflow.UpdatedAt);
     }
