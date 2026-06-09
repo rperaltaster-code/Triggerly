@@ -9,6 +9,7 @@ public record CreateWorkflowCommand(
     string Description,
     string TenantId,
     string CreatedBy,
+    string? CreatedByName,
     List<CreateWorkflowStepRequest> Steps
 ) : IRequest<WorkflowDto>;
 

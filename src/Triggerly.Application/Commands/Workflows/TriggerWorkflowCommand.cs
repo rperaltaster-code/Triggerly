@@ -7,5 +7,6 @@ public record TriggerWorkflowCommand(
     Guid WorkflowId,
     string TenantId,
     string? TriggeredBy,
+    string? TriggeredByName,
     Dictionary<string, object>? InputData
 ) : IRequest<WorkflowExecutionDto>;

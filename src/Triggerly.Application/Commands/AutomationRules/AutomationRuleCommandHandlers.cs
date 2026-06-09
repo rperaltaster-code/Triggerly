@@ -1,4 +1,5 @@
 using MediatR;
+using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Entities;
 using Triggerly.Domain.Interfaces;
 using Triggerly.Shared.DTOs;
@@ -10,15 +11,18 @@ public class CreateAutomationRuleCommandHandler : IRequestHandler<CreateAutomati
     private readonly IAutomationRuleRepository _repository;
     private readonly IWorkflowRepository _workflowRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditService _audit;
 
     public CreateAutomationRuleCommandHandler(
         IAutomationRuleRepository repository,
         IWorkflowRepository workflowRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IAuditService audit)
     {
         _repository = repository;
         _workflowRepository = workflowRepository;
         _unitOfWork = unitOfWork;
+        _audit = audit;
     }
 
     public async Task<AutomationRuleDto> Handle(CreateAutomationRuleCommand request, CancellationToken cancellationToken)
@@ -39,6 +43,10 @@ public class CreateAutomationRuleCommandHandler : IRequestHandler<CreateAutomati
 
         await _repository.AddAsync(rule, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _audit.LogAsync(request.TenantId, request.UserId, request.UserName,
+            "AutomationRuleCreated", "AutomationRule", rule.Id.ToString(), rule.Name,
+            ct: cancellationToken);
 
         return new AutomationRuleDto(
             rule.Id, rule.Name, rule.Description, rule.TriggerType,
@@ -89,11 +97,13 @@ public class DeleteAutomationRuleCommandHandler : IRequestHandler<DeleteAutomati
 {
     private readonly IAutomationRuleRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditService _audit;
 
-    public DeleteAutomationRuleCommandHandler(IAutomationRuleRepository repository, IUnitOfWork unitOfWork)
+    public DeleteAutomationRuleCommandHandler(IAutomationRuleRepository repository, IUnitOfWork unitOfWork, IAuditService audit)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _audit = audit;
     }
 
     public async Task Handle(DeleteAutomationRuleCommand request, CancellationToken cancellationToken)
@@ -106,6 +116,10 @@ public class DeleteAutomationRuleCommandHandler : IRequestHandler<DeleteAutomati
 
         await _repository.DeleteAsync(request.Id, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _audit.LogAsync(request.TenantId, request.UserId, request.UserName,
+            "AutomationRuleDeleted", "AutomationRule", rule.Id.ToString(), rule.Name,
+            ct: cancellationToken);
     }
 }
 
@@ -113,11 +127,13 @@ public class ToggleAutomationRuleCommandHandler : IRequestHandler<ToggleAutomati
 {
     private readonly IAutomationRuleRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditService _audit;
 
-    public ToggleAutomationRuleCommandHandler(IAutomationRuleRepository repository, IUnitOfWork unitOfWork)
+    public ToggleAutomationRuleCommandHandler(IAutomationRuleRepository repository, IUnitOfWork unitOfWork, IAuditService audit)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _audit = audit;
     }
 
     public async Task Handle(ToggleAutomationRuleCommand request, CancellationToken cancellationToken)
@@ -131,5 +147,10 @@ public class ToggleAutomationRuleCommandHandler : IRequestHandler<ToggleAutomati
         if (request.Enable) rule.Enable(); else rule.Disable();
         await _repository.UpdateAsync(rule, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _audit.LogAsync(request.TenantId, request.UserId, request.UserName,
+            request.Enable ? "AutomationRuleEnabled" : "AutomationRuleDisabled",
+            "AutomationRule", rule.Id.ToString(), rule.Name,
+            ct: cancellationToken);
     }
 }

@@ -13,17 +13,20 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
     private readonly IWorkflowExecutionRepository _executionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITemporalService _temporalService;
+    private readonly IAuditService _audit;
 
     public TriggerWorkflowCommandHandler(
         IWorkflowRepository workflowRepository,
         IWorkflowExecutionRepository executionRepository,
         IUnitOfWork unitOfWork,
-        ITemporalService temporalService)
+        ITemporalService temporalService,
+        IAuditService audit)
     {
         _workflowRepository = workflowRepository;
         _executionRepository = executionRepository;
         _unitOfWork = unitOfWork;
         _temporalService = temporalService;
+        _audit = audit;
     }
 
     public async Task<WorkflowExecutionDto> Handle(TriggerWorkflowCommand request, CancellationToken cancellationToken)
@@ -59,6 +62,12 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
         execution.Start(runId);
         await _executionRepository.UpdateAsync(execution, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _audit.LogAsync(request.TenantId,
+            request.TriggeredBy ?? "system",
+            request.TriggeredByName ?? request.TriggeredBy ?? "System",
+            "ExecutionTriggered", "Execution", execution.Id.ToString(), workflow.Name,
+            ct: cancellationToken);
 
         return MapToDto(execution, workflow.Name);
     }

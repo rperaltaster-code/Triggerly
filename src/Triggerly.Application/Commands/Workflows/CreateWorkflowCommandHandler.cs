@@ -1,4 +1,5 @@
 using MediatR;
+using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Entities;
 using Triggerly.Domain.Interfaces;
 using Triggerly.Shared.DTOs;
@@ -9,11 +10,13 @@ public class CreateWorkflowCommandHandler : IRequestHandler<CreateWorkflowComman
 {
     private readonly IWorkflowRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuditService _audit;
 
-    public CreateWorkflowCommandHandler(IWorkflowRepository repository, IUnitOfWork unitOfWork)
+    public CreateWorkflowCommandHandler(IWorkflowRepository repository, IUnitOfWork unitOfWork, IAuditService audit)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _audit = audit;
     }
 
     public async Task<WorkflowDto> Handle(CreateWorkflowCommand request, CancellationToken cancellationToken)
@@ -38,6 +41,10 @@ public class CreateWorkflowCommandHandler : IRequestHandler<CreateWorkflowComman
 
         await _repository.AddAsync(workflow, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _audit.LogAsync(request.TenantId, request.CreatedBy, request.CreatedByName ?? request.CreatedBy,
+            "WorkflowCreated", "Workflow", workflow.Id.ToString(), workflow.Name,
+            ct: cancellationToken);
 
         return MapToDto(workflow);
     }

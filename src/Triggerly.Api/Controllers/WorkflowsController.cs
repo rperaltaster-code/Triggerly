@@ -17,6 +17,7 @@ public class WorkflowsController : ControllerBase
 
     private string TenantId => User.FindFirstValue("tenantId") ?? throw new UnauthorizedAccessException("Missing tenantId claim.");
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Missing user claim.");
+    private string UserName => User.FindFirstValue(ClaimTypes.Name) ?? "Unknown";
 
     public WorkflowsController(IMediator mediator) => _mediator = mediator;
 
@@ -43,7 +44,7 @@ public class WorkflowsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateWorkflowRequest request, CancellationToken cancellationToken = default)
     {
-        var command = new CreateWorkflowCommand(request.Name, request.Description ?? string.Empty, TenantId, UserId, []);
+        var command = new CreateWorkflowCommand(request.Name, request.Description ?? string.Empty, TenantId, UserId, UserName, []);
         var result = await _mediator.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
@@ -59,21 +60,21 @@ public class WorkflowsController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken = default)
     {
-        await _mediator.Send(new DeleteWorkflowCommand(id, TenantId), cancellationToken);
+        await _mediator.Send(new DeleteWorkflowCommand(id, TenantId, UserId, UserName), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("{id:guid}/activate")]
     public async Task<IActionResult> Activate(Guid id, CancellationToken cancellationToken = default)
     {
-        await _mediator.Send(new ActivateWorkflowCommand(id, TenantId), cancellationToken);
+        await _mediator.Send(new ActivateWorkflowCommand(id, TenantId, UserId, UserName), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("{id:guid}/deactivate")]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken cancellationToken = default)
     {
-        await _mediator.Send(new DeactivateWorkflowCommand(id, TenantId), cancellationToken);
+        await _mediator.Send(new DeactivateWorkflowCommand(id, TenantId, UserId, UserName), cancellationToken);
         return NoContent();
     }
 
@@ -84,7 +85,7 @@ public class WorkflowsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new TriggerWorkflowCommand(id, TenantId, UserId, request.InputData), cancellationToken);
+            new TriggerWorkflowCommand(id, TenantId, UserId, UserName, request.InputData), cancellationToken);
         return Ok(result);
     }
 

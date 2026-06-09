@@ -17,6 +17,8 @@ public class AutomationRulesController : ControllerBase
 {
     private readonly IMediator _mediator;
     private string TenantId => User.FindFirstValue("tenantId") ?? throw new UnauthorizedAccessException("Missing tenantId claim.");
+    private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Missing user claim.");
+    private string UserName => User.FindFirstValue(ClaimTypes.Name) ?? "Unknown";
 
     public AutomationRulesController(IMediator mediator) => _mediator = mediator;
 
@@ -42,7 +44,7 @@ public class AutomationRulesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateAutomationRuleRequest request, CancellationToken cancellationToken = default)
     {
-        var command = new CreateAutomationRuleCommand(request.Name, request.Description ?? string.Empty, request.TriggerType, request.TriggerConfig ?? "{}", request.WorkflowId, TenantId);
+        var command = new CreateAutomationRuleCommand(request.Name, request.Description ?? string.Empty, request.TriggerType, request.TriggerConfig ?? "{}", request.WorkflowId, TenantId, UserId, UserName);
         var result = await _mediator.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
@@ -59,21 +61,21 @@ public class AutomationRulesController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken = default)
     {
-        await _mediator.Send(new DeleteAutomationRuleCommand(id, TenantId), cancellationToken);
+        await _mediator.Send(new DeleteAutomationRuleCommand(id, TenantId, UserId, UserName), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("{id:guid}/enable")]
     public async Task<IActionResult> Enable(Guid id, CancellationToken cancellationToken = default)
     {
-        await _mediator.Send(new ToggleAutomationRuleCommand(id, true, TenantId), cancellationToken);
+        await _mediator.Send(new ToggleAutomationRuleCommand(id, true, TenantId, UserId, UserName), cancellationToken);
         return NoContent();
     }
 
     [HttpPost("{id:guid}/disable")]
     public async Task<IActionResult> Disable(Guid id, CancellationToken cancellationToken = default)
     {
-        await _mediator.Send(new ToggleAutomationRuleCommand(id, false, TenantId), cancellationToken);
+        await _mediator.Send(new ToggleAutomationRuleCommand(id, false, TenantId, UserId, UserName), cancellationToken);
         return NoContent();
     }
 }

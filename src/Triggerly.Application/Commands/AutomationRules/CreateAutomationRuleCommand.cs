@@ -10,7 +10,9 @@ public record CreateAutomationRuleCommand(
     TriggerType TriggerType,
     string TriggerConfig,
     Guid WorkflowId,
-    string TenantId
+    string TenantId,
+    string UserId,
+    string UserName
 ) : IRequest<AutomationRuleDto>;
 
 public record UpdateAutomationRuleCommand(
@@ -21,6 +23,6 @@ public record UpdateAutomationRuleCommand(
     string TenantId
 ) : IRequest<AutomationRuleDto>;
 
-public record DeleteAutomationRuleCommand(Guid Id, string TenantId) : IRequest;
+public record DeleteAutomationRuleCommand(Guid Id, string TenantId, string UserId, string UserName) : IRequest;
 
-public record ToggleAutomationRuleCommand(Guid Id, bool Enable, string TenantId) : IRequest;
+public record ToggleAutomationRuleCommand(Guid Id, bool Enable, string TenantId, string UserId, string UserName) : IRequest;

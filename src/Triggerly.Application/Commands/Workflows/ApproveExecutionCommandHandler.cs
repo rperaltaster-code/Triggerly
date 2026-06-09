@@ -9,15 +9,18 @@ public class ApproveExecutionCommandHandler : IRequestHandler<ApproveExecutionCo
     private readonly IWorkflowExecutionRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITemporalService _temporalService;
+    private readonly IAuditService _audit;
 
     public ApproveExecutionCommandHandler(
         IWorkflowExecutionRepository repository,
         IUnitOfWork unitOfWork,
-        ITemporalService temporalService)
+        ITemporalService temporalService,
+        IAuditService audit)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
         _temporalService = temporalService;
+        _audit = audit;
     }
 
     public async Task Handle(ApproveExecutionCommand request, CancellationToken cancellationToken)
@@ -34,6 +37,10 @@ public class ApproveExecutionCommandHandler : IRequestHandler<ApproveExecutionCo
 
         await _repository.UpdateAsync(execution, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _audit.LogAsync(request.TenantId, request.ActorId, request.ActorName,
+            "ExecutionApproved", "Execution", execution.Id.ToString(), execution.TemporalWorkflowId,
+            ct: cancellationToken);
     }
 }
 
@@ -42,15 +49,18 @@ public class RejectExecutionCommandHandler : IRequestHandler<RejectExecutionComm
     private readonly IWorkflowExecutionRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITemporalService _temporalService;
+    private readonly IAuditService _audit;
 
     public RejectExecutionCommandHandler(
         IWorkflowExecutionRepository repository,
         IUnitOfWork unitOfWork,
-        ITemporalService temporalService)
+        ITemporalService temporalService,
+        IAuditService audit)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
         _temporalService = temporalService;
+        _audit = audit;
     }
 
     public async Task Handle(RejectExecutionCommand request, CancellationToken cancellationToken)
@@ -67,6 +77,10 @@ public class RejectExecutionCommandHandler : IRequestHandler<RejectExecutionComm
 
         await _repository.UpdateAsync(execution, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _audit.LogAsync(request.TenantId, request.ActorId, request.ActorName,
+            "ExecutionRejected", "Execution", execution.Id.ToString(), execution.TemporalWorkflowId,
+            $"Reason: {request.Reason}", cancellationToken);
     }
 }
 
@@ -75,15 +89,18 @@ public class CancelExecutionCommandHandler : IRequestHandler<CancelExecutionComm
     private readonly IWorkflowExecutionRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITemporalService _temporalService;
+    private readonly IAuditService _audit;
 
     public CancelExecutionCommandHandler(
         IWorkflowExecutionRepository repository,
         IUnitOfWork unitOfWork,
-        ITemporalService temporalService)
+        ITemporalService temporalService,
+        IAuditService audit)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
         _temporalService = temporalService;
+        _audit = audit;
     }
 
     public async Task Handle(CancelExecutionCommand request, CancellationToken cancellationToken)
@@ -98,5 +115,9 @@ public class CancelExecutionCommandHandler : IRequestHandler<CancelExecutionComm
         await _temporalService.CancelWorkflowAsync(execution.TemporalWorkflowId, cancellationToken);
         await _repository.UpdateAsync(execution, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _audit.LogAsync(request.TenantId, request.UserId, request.UserName,
+            "ExecutionCancelled", "Execution", execution.Id.ToString(), execution.TemporalWorkflowId,
+            ct: cancellationToken);
     }
 }
