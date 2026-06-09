@@ -51,6 +51,49 @@ public class WorkflowExecutionRepository : IWorkflowExecutionRepository
     public async Task AddCommentAsync(ExecutionComment comment, CancellationToken cancellationToken = default) =>
         await _context.ExecutionComments.AddAsync(comment, cancellationToken);
 
+    public Task<bool> StepExistsAsync(Guid executionId, Guid stepId, CancellationToken cancellationToken = default) =>
+        _context.ExecutionSteps.AnyAsync(s => s.ExecutionId == executionId && s.StepId == stepId, cancellationToken);
+
+    public async Task AddStepAsync(ExecutionStep step, CancellationToken cancellationToken = default) =>
+        await _context.ExecutionSteps.AddAsync(step, cancellationToken);
+
+    public Task UpdateCurrentStepAsync(Guid executionId, int stepOrder, string stepName, CancellationToken cancellationToken = default) =>
+        _context.Executions
+            .Where(e => e.Id == executionId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(e => e.CurrentStepOrder, stepOrder)
+                .SetProperty(e => e.CurrentStepName, stepName), cancellationToken);
+
+    public async Task CompleteStepAsync(Guid executionId, Guid stepId, bool success, string? errorMessage, CancellationToken cancellationToken = default)
+    {
+        var step = await _context.ExecutionSteps
+            .FirstOrDefaultAsync(s => s.ExecutionId == executionId && s.StepId == stepId, cancellationToken);
+        if (step is null) return;
+
+        if (success) step.Complete(null);
+        else step.Fail(errorMessage ?? "Unknown error");
+    }
+
+    public Task<int> GetCurrentStepOrderAsync(Guid executionId, CancellationToken cancellationToken = default) =>
+        _context.Executions
+            .Where(e => e.Id == executionId)
+            .Select(e => e.CurrentStepOrder)
+            .FirstOrDefaultAsync(cancellationToken);
+
+    public Task SetStatusAsync(Guid executionId, ExecutionStatus status, string? errorMessage, DateTime? completedAt, CancellationToken cancellationToken = default) =>
+        _context.Executions
+            .Where(e => e.Id == executionId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(e => e.Status, status)
+                .SetProperty(e => e.ErrorMessage, errorMessage)
+                .SetProperty(e => e.CompletedAt, completedAt), cancellationToken);
+
+    public Task SetSlaBreachedAsync(Guid executionId, DateTime breachedAt, CancellationToken cancellationToken = default) =>
+        _context.Executions
+            .Where(e => e.Id == executionId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(e => e.SlaBreachedAt, breachedAt), cancellationToken);
+
     public Task UpdateAsync(WorkflowExecution execution, CancellationToken cancellationToken = default)
     {
         if (_context.Entry(execution).State == Microsoft.EntityFrameworkCore.EntityState.Detached)
