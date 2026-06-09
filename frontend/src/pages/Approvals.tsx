@@ -104,7 +104,7 @@ export function Approvals() {
 
   const handleRejectConfirm = async (_id: string, reason: string) => {
     await reject.mutateAsync({ id: rejectTarget!.id, reason })
-    setRejectTarget(null)
+    setRejectTarget(null)  // only runs if mutateAsync resolves (no error)
   }
 
   return (

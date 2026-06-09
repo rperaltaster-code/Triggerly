@@ -11,11 +11,17 @@ interface Props {
 
 export function RejectModal({ executionId, workflowName, onConfirm, onClose, isPending }: Props) {
   const [reason, setReason] = useState('')
+  const [error, setError] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!reason.trim()) return
-    onConfirm(executionId, reason.trim())
+    setError('')
+    try {
+      await onConfirm(executionId, reason.trim())
+    } catch {
+      setError('Failed to reject. The execution may have already been actioned.')
+    }
   }
 
   return (
@@ -36,6 +42,10 @@ export function RejectModal({ executionId, workflowName, onConfirm, onClose, isP
             You are rejecting <span className="font-medium text-gray-900">{workflowName}</span>.
             This cannot be undone.
           </p>
+
+          {error && (
+            <div className="px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
