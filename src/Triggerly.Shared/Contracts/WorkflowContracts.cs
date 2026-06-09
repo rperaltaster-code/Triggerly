@@ -7,11 +7,21 @@ public static class TemporalConstants
     public const string TaskQueue = "triggerly-automation";
 }
 
+public record WorkflowStepInput(
+    Guid Id,
+    string Name,
+    string Type,
+    int Order,
+    Dictionary<string, object> Config,
+    string? ApproverEmail
+);
+
 public record AutomationWorkflowInput(
     Guid WorkflowDefinitionId,
     Guid ExecutionId,
     string TenantId,
-    Dictionary<string, object> InputData
+    Dictionary<string, object> InputData,
+    List<WorkflowStepInput> Steps
 );
 
 public record AutomationWorkflowResult(

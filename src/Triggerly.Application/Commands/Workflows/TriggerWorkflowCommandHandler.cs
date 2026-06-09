@@ -2,6 +2,7 @@ using MediatR;
 using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Entities;
 using Triggerly.Domain.Interfaces;
+using Triggerly.Shared.Contracts;
 using Triggerly.Shared.DTOs;
 using Triggerly.Shared.Models;
 
@@ -52,11 +53,16 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
         await _executionRepository.AddAsync(execution, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        var steps = workflow.Steps
+            .Select(s => new WorkflowStepInput(s.Id, s.Name, s.Type.ToString(), s.Order, s.Config, s.ApproverEmail))
+            .ToList();
+
         var runId = await _temporalService.StartWorkflowAsync(
             workflow.Id,
             execution.Id,
             request.TenantId,
             request.InputData,
+            steps,
             cancellationToken);
 
         execution.Start(runId);

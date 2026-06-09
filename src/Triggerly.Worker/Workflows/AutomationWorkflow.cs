@@ -1,4 +1,3 @@
-using Temporalio.Activities;
 using Temporalio.Workflows;
 using Triggerly.Shared.Contracts;
 using Triggerly.Worker.Activities;
@@ -30,14 +29,10 @@ public class AutomationWorkflow : IAutomationWorkflow
 
         try
         {
-            _currentStatus = "Validating";
-            var steps = await Workflow.ExecuteActivityAsync(
-                (WorkflowActivities act) => act.LoadWorkflowStepsAsync(input.WorkflowDefinitionId),
-                activityOptions);
-
+            _currentStatus = "Running";
             var context = new Dictionary<string, object>(input.InputData);
 
-            foreach (var step in steps.OrderBy(s => s.Order))
+            foreach (var step in input.Steps.OrderBy(s => s.Order))
             {
                 _currentStatus = $"Executing: {step.Name}";
 

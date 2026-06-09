@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Triggerly.Application.Interfaces;
 using Triggerly.Infrastructure.Persistence;
+using Triggerly.Shared.Contracts;
 using Triggerly.Shared.Models;
 
 namespace Triggerly.Infrastructure.Temporal;
@@ -23,6 +24,7 @@ public class StubTemporalService : ITemporalService
         Guid executionId,
         string tenantId,
         Dictionary<string, object>? inputData,
+        List<WorkflowStepInput> steps,
         CancellationToken cancellationToken = default)
     {
         var fakeRunId = $"stub-run-{Guid.NewGuid():N}";

@@ -1,3 +1,5 @@
+using Triggerly.Shared.Contracts;
+
 namespace Triggerly.Application.Interfaces;
 
 public interface ITemporalService
@@ -7,6 +9,7 @@ public interface ITemporalService
         Guid executionId,
         string tenantId,
         Dictionary<string, object>? inputData,
+        List<WorkflowStepInput> steps,
         CancellationToken cancellationToken = default);
 
     Task SendApprovalSignalAsync(string temporalWorkflowId, bool approved, string actorId, string? reason = null, CancellationToken cancellationToken = default);
