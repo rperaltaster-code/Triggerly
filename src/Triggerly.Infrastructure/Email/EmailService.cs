@@ -37,9 +37,10 @@ public class EmailService : IEmailService
         var fromAddress = _configuration["Email:FromAddress"] ?? "noreply@triggerly.io";
         var fromName = _configuration["Email:FromName"] ?? "Triggerly";
 
+        var enableSsl = bool.TryParse(_configuration["Email:EnableSsl"], out var ssl) ? ssl : port != 1025;
         using var client = new SmtpClient(host, port)
         {
-            EnableSsl = true,
+            EnableSsl = enableSsl,
             Credentials = !string.IsNullOrEmpty(username)
                 ? new NetworkCredential(username, password)
                 : null
