@@ -47,7 +47,7 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
             workflow.Id,
             temporalWorkflowId,
             request.TenantId,
-            request.TriggeredBy,
+            request.TriggeredByName ?? request.TriggeredBy,
             request.InputData);
 
         await _executionRepository.AddAsync(execution, cancellationToken);

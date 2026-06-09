@@ -38,7 +38,7 @@ public class AutomationWorkflow : IAutomationWorkflow
 
                 await Workflow.ExecuteActivityAsync(
                     (WorkflowActivities act) => act.UpdateExecutionStatusAsync(
-                        input.ExecutionId, step.Order, step.Name, "Running"),
+                        input.ExecutionId, step.Id, step.Order, step.Name, "Running"),
                     activityOptions);
 
                 switch (step.Type)
