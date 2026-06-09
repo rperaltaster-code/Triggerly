@@ -4,8 +4,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Triggerly.Application.Commands.AutomationRules;
 using Triggerly.Application.Queries.AutomationRules;
+using Triggerly.Shared.Models;
 
 namespace Triggerly.Api.Controllers;
+
+public record CreateAutomationRuleRequest(string Name, string? Description, TriggerType TriggerType, string? TriggerConfig, Guid WorkflowId);
 
 [Authorize]
 [ApiController]
@@ -37,10 +40,10 @@ public class AutomationRulesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateAutomationRuleCommand command, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Create([FromBody] CreateAutomationRuleRequest request, CancellationToken cancellationToken = default)
     {
-        var commandWithTenant = command with { TenantId = TenantId };
-        var result = await _mediator.Send(commandWithTenant, cancellationToken);
+        var command = new CreateAutomationRuleCommand(request.Name, request.Description ?? string.Empty, request.TriggerType, request.TriggerConfig ?? "{}", request.WorkflowId, TenantId);
+        var result = await _mediator.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 

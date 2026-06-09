@@ -49,8 +49,32 @@ public class WorkflowRepository : IWorkflowRepository
 
     public Task UpdateAsync(WorkflowDefinition workflow, CancellationToken cancellationToken = default)
     {
-        _context.Workflows.Update(workflow);
+        if (_context.Entry(workflow).State == EntityState.Detached)
+            _context.Workflows.Update(workflow);
         return Task.CompletedTask;
+    }
+
+    public async Task RemoveAllStepsAsync(Guid workflowId, CancellationToken cancellationToken = default)
+    {
+        var steps = await _context.WorkflowSteps
+            .AsNoTracking()
+            .Where(s => s.WorkflowId == workflowId)
+            .ToListAsync(cancellationToken);
+        _context.WorkflowSteps.RemoveRange(steps);
+    }
+
+    public async Task AddStepsAsync(IEnumerable<WorkflowStep> steps, CancellationToken cancellationToken = default)
+    {
+        await _context.WorkflowSteps.AddRangeAsync(steps, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<WorkflowStep>> GetStepsAsync(Guid workflowId, CancellationToken cancellationToken = default)
+    {
+        return await _context.WorkflowSteps
+            .AsNoTracking()
+            .Where(s => s.WorkflowId == workflowId)
+            .OrderBy(s => s.Order)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
