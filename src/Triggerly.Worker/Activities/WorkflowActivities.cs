@@ -1,5 +1,7 @@
 using Temporalio.Activities;
+using Triggerly.Domain.Entities;
 using Triggerly.Domain.Interfaces;
+using Triggerly.Shared.Models;
 
 namespace Triggerly.Worker.Activities;
 
@@ -38,27 +40,32 @@ public class WorkflowActivities
     [Activity]
     public async Task UpdateExecutionStatusAsync(Guid executionId, Guid stepId, int stepOrder, string stepName, string status)
     {
-        var execution = await _executionRepository.GetByIdAsync(executionId)
-            ?? throw new InvalidOperationException($"Execution {executionId} not found.");
+        await _executionRepository.UpdateCurrentStepAsync(executionId, stepOrder, stepName);
 
-        execution.UpdateCurrentStep(stepOrder, stepName);
-        if (execution.Steps.All(s => s.StepId != stepId))
-            execution.AddStep(stepId, stepName, stepOrder);
-
-        await _executionRepository.UpdateAsync(execution);
-        await _unitOfWork.SaveChangesAsync();
+        var exists = await _executionRepository.StepExistsAsync(executionId, stepId);
+        if (!exists)
+        {
+            var step = ExecutionStep.Create(executionId, stepId, stepName, stepOrder);
+            step.Start();
+            await _executionRepository.AddStepAsync(step);
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
 
     [Activity]
     public async Task RequestApprovalAsync(Guid executionId, Guid stepId, string stepName, string? approverEmail)
     {
-        var execution = await _executionRepository.GetByIdAsync(executionId)
-            ?? throw new InvalidOperationException($"Execution {executionId} not found.");
+        await _executionRepository.SetStatusAsync(executionId, ExecutionStatus.WaitingApproval, null, null);
 
-        execution.RequestApproval();
-        execution.AddStep(stepId, stepName, execution.CurrentStepOrder);
-        await _executionRepository.UpdateAsync(execution);
-        await _unitOfWork.SaveChangesAsync();
+        var exists = await _executionRepository.StepExistsAsync(executionId, stepId);
+        if (!exists)
+        {
+            var currentOrder = await _executionRepository.GetCurrentStepOrderAsync(executionId);
+            var step = ExecutionStep.Create(executionId, stepId, stepName, currentOrder);
+            step.Start();
+            await _executionRepository.AddStepAsync(step);
+            await _unitOfWork.SaveChangesAsync();
+        }
 
         ActivityExecutionContext.Current.Logger.LogInformation(
             "Approval requested for execution {ExecutionId}, step {StepName}, approver: {Approver}",
@@ -68,16 +75,7 @@ public class WorkflowActivities
     [Activity]
     public async Task CompleteStepAsync(Guid executionId, Guid stepId, bool success, string? errorMessage)
     {
-        var execution = await _executionRepository.GetByIdAsync(executionId);
-        if (execution is null) return;
-
-        var step = execution.Steps.FirstOrDefault(s => s.StepId == stepId);
-        if (step is null) return;
-
-        if (success) step.Complete(null);
-        else step.Fail(errorMessage ?? "Unknown error");
-
-        await _executionRepository.UpdateAsync(execution);
+        await _executionRepository.CompleteStepAsync(executionId, stepId, success, errorMessage);
         await _unitOfWork.SaveChangesAsync();
     }
 
@@ -94,24 +92,16 @@ public class WorkflowActivities
     public async Task CompleteExecutionAsync(Guid executionId, bool success,
         Dictionary<string, object> outputData, string? errorMessage)
     {
-        var execution = await _executionRepository.GetByIdAsync(executionId);
-        if (execution is null) return;
-
-        if (success) execution.Complete(outputData);
-        else execution.Fail(errorMessage ?? "Workflow failed");
-
-        await _executionRepository.UpdateAsync(execution);
+        var status = success ? ExecutionStatus.Completed : ExecutionStatus.Failed;
+        await _executionRepository.SetStatusAsync(
+            executionId, status, errorMessage, DateTime.UtcNow);
         await _unitOfWork.SaveChangesAsync();
     }
 
     [Activity]
     public async Task MarkSlaBreachedAsync(Guid executionId)
     {
-        var execution = await _executionRepository.GetByIdAsync(executionId);
-        if (execution is null) return;
-
-        execution.MarkSlaBreached();
-        await _executionRepository.UpdateAsync(execution);
+        await _executionRepository.SetSlaBreachedAsync(executionId, DateTime.UtcNow);
         await _unitOfWork.SaveChangesAsync();
     }
 }
