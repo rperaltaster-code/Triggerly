@@ -49,7 +49,8 @@ public class WorkflowRepository : IWorkflowRepository
 
     public Task UpdateAsync(WorkflowDefinition workflow, CancellationToken cancellationToken = default)
     {
-        _context.Workflows.Update(workflow);
+        if (_context.Entry(workflow).State == EntityState.Detached)
+            _context.Workflows.Update(workflow);
         return Task.CompletedTask;
     }
 
