@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, CheckCircle, XCircle, Clock, AlertTriangle, MessageSquare, Send } from 'lucide-react'
 import { useExecution, useApproveExecution, useRejectExecution, useAddComment } from '../hooks/useExecutions'
+import { RejectModal } from '../components/executions/RejectModal'
 import { Badge } from '../components/ui/Badge'
 import { format, formatDistanceToNow } from 'date-fns'
 import type { ExecutionStatus } from '../types'
@@ -26,9 +27,15 @@ export function ExecutionDetail() {
   const reject = useRejectExecution()
   const addComment = useAddComment(id!)
   const [commentText, setCommentText] = useState('')
+  const [showRejectModal, setShowRejectModal] = useState(false)
 
   if (isLoading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>
   if (!execution) return <div className="text-center py-12 text-gray-500">Execution not found</div>
+
+  const handleRejectConfirm = async (execId: string, reason: string) => {
+    await reject.mutateAsync({ id: execId, reason })
+    setShowRejectModal(false)
+  }
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,16 +67,14 @@ export function ExecutionDetail() {
           <div className="flex gap-2">
             <button
               onClick={() => approve.mutate(execution.id)}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+              disabled={approve.isPending}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50"
             >
               <CheckCircle size={15} /> Approve
             </button>
             <button
-              onClick={() => {
-                const reason = prompt('Reason for rejection:')
-                if (reason) reject.mutate({ id: execution.id, reason })
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+              onClick={() => setShowRejectModal(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm"
             >
               <XCircle size={15} /> Reject
             </button>
@@ -192,6 +197,16 @@ export function ExecutionDetail() {
             {JSON.stringify(execution.inputData, null, 2)}
           </pre>
         </div>
+      )}
+
+      {showRejectModal && (
+        <RejectModal
+          executionId={execution.id}
+          workflowName={execution.workflowName}
+          onConfirm={handleRejectConfirm}
+          onClose={() => setShowRejectModal(false)}
+          isPending={reject.isPending}
+        />
       )}
     </div>
   )

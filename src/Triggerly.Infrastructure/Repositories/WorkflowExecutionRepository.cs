@@ -74,6 +74,17 @@ public class WorkflowExecutionRepository : IWorkflowExecutionRepository
         else step.Fail(errorMessage ?? "Unknown error");
     }
 
+    public Task CompleteCurrentStepAsync(Guid executionId, bool success, string? errorMessage, CancellationToken cancellationToken = default)
+    {
+        var status = success ? ExecutionStatus.Completed : ExecutionStatus.Failed;
+        return _context.ExecutionSteps
+            .Where(s => s.ExecutionId == executionId && s.Status == ExecutionStatus.Running)
+            .ExecuteUpdateAsync(u => u
+                .SetProperty(s => s.Status, status)
+                .SetProperty(s => s.ErrorMessage, errorMessage)
+                .SetProperty(s => s.CompletedAt, DateTime.UtcNow), cancellationToken);
+    }
+
     public Task<int> GetCurrentStepOrderAsync(Guid executionId, CancellationToken cancellationToken = default) =>
         _context.Executions
             .Where(e => e.Id == executionId)

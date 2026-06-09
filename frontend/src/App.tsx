@@ -11,6 +11,7 @@ import { WorkflowBuilder } from './pages/WorkflowBuilder'
 import { Executions } from './pages/Executions'
 import { ExecutionDetail } from './pages/ExecutionDetail'
 import { AutomationRules } from './pages/AutomationRules'
+import { Approvals } from './pages/Approvals'
 import { AuditLogPage } from './pages/AuditLogPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,7 @@ function AppRoutes() {
         <Route path="/executions" element={<Executions />} />
         <Route path="/executions/:id" element={<ExecutionDetail />} />
         <Route path="/automation" element={<AutomationRules />} />
+        <Route path="/approvals" element={<Approvals />} />
         <Route path="/audit" element={<AuditLogPage />} />
       </Route>
     </Routes>

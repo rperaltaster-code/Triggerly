@@ -1,20 +1,13 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, GitBranch, Zap, Activity, Settings, LogOut, Shield } from 'lucide-react'
+import { LayoutDashboard, GitBranch, Zap, Activity, Settings, LogOut, Shield, CheckSquare } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuth } from '../../contexts/AuthContext'
-
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/workflows', label: 'Workflows', icon: GitBranch },
-  { to: '/automation', label: 'Automation Rules', icon: Zap },
-  { to: '/executions', label: 'Executions', icon: Activity },
-  { to: '/audit', label: 'Audit Log', icon: Shield },
-  { to: '/settings', label: 'Settings', icon: Settings },
-]
+import { useExecutions } from '../../hooks/useExecutions'
 
 export function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { data: pendingData } = useExecutions({ status: 'WaitingApproval', pageSize: 1 })
 
   const handleLogout = () => {
     logout()
@@ -39,24 +32,40 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map(({ to, label, icon: Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              clsx(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              )
-            }
-          >
-            <Icon size={18} />
-            {label}
-          </NavLink>
-        ))}
+        {[
+          { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+          { to: '/workflows', label: 'Workflows', icon: GitBranch },
+          { to: '/automation', label: 'Automation Rules', icon: Zap },
+          { to: '/executions', label: 'Executions', icon: Activity },
+          { to: '/approvals', label: 'Approvals', icon: CheckSquare },
+          { to: '/audit', label: 'Audit Log', icon: Shield },
+          { to: '/settings', label: 'Settings', icon: Settings },
+        ].map(({ to, label, icon: Icon, end }) => {
+          const pendingCount = label === 'Approvals' ? (pendingData?.totalCount ?? 0) : 0
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                clsx(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                )
+              }
+            >
+              <Icon size={18} />
+              <span className="flex-1">{label}</span>
+              {pendingCount > 0 && (
+                <span className="px-1.5 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full min-w-[20px] text-center">
+                  {pendingCount}
+                </span>
+              )}
+            </NavLink>
+          )
+        })}
       </nav>
 
       <div className="px-4 py-4 border-t border-gray-700">

@@ -18,6 +18,7 @@ public interface IWorkflowExecutionRepository
     Task AddStepAsync(ExecutionStep step, CancellationToken cancellationToken = default);
     Task UpdateCurrentStepAsync(Guid executionId, int stepOrder, string stepName, CancellationToken cancellationToken = default);
     Task CompleteStepAsync(Guid executionId, Guid stepId, bool success, string? errorMessage, CancellationToken cancellationToken = default);
+    Task CompleteCurrentStepAsync(Guid executionId, bool success, string? errorMessage, CancellationToken cancellationToken = default);
     Task SetStatusAsync(Guid executionId, ExecutionStatus status, string? errorMessage, DateTime? completedAt, CancellationToken cancellationToken = default);
     Task<int> GetCurrentStepOrderAsync(Guid executionId, CancellationToken cancellationToken = default);
     Task SetSlaBreachedAsync(Guid executionId, DateTime breachedAt, CancellationToken cancellationToken = default);
