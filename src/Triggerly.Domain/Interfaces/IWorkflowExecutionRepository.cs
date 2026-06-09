@@ -12,6 +12,8 @@ public interface IWorkflowExecutionRepository
         CancellationToken cancellationToken = default);
     Task AddAsync(WorkflowExecution execution, CancellationToken cancellationToken = default);
     Task UpdateAsync(WorkflowExecution execution, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync(Guid id, string tenantId, CancellationToken cancellationToken = default);
+    Task AddCommentAsync(ExecutionComment comment, CancellationToken cancellationToken = default);
     Task<int> CountByStatusAsync(string tenantId, ExecutionStatus status, CancellationToken cancellationToken = default);
     Task<int> CountCompletedTodayAsync(string tenantId, CancellationToken cancellationToken = default);
     Task<List<(string Date, int Completed, int Failed)>> GetRecentTrendAsync(string tenantId, int days, CancellationToken cancellationToken = default);

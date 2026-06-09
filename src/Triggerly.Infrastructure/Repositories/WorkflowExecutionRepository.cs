@@ -45,6 +45,12 @@ public class WorkflowExecutionRepository : IWorkflowExecutionRepository
     public async Task AddAsync(WorkflowExecution execution, CancellationToken cancellationToken = default) =>
         await _context.Executions.AddAsync(execution, cancellationToken);
 
+    public Task<bool> ExistsAsync(Guid id, string tenantId, CancellationToken cancellationToken = default) =>
+        _context.Executions.AnyAsync(e => e.Id == id && e.TenantId == tenantId, cancellationToken);
+
+    public async Task AddCommentAsync(ExecutionComment comment, CancellationToken cancellationToken = default) =>
+        await _context.ExecutionComments.AddAsync(comment, cancellationToken);
+
     public Task UpdateAsync(WorkflowExecution execution, CancellationToken cancellationToken = default)
     {
         if (_context.Entry(execution).State == Microsoft.EntityFrameworkCore.EntityState.Detached)
