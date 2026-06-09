@@ -1,24 +1,22 @@
 using MediatR;
 using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Interfaces;
+using Triggerly.Shared.Models;
 
 namespace Triggerly.Application.Commands.Workflows;
 
 public class ApproveExecutionCommandHandler : IRequestHandler<ApproveExecutionCommand>
 {
     private readonly IWorkflowExecutionRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly ITemporalService _temporalService;
     private readonly IAuditService _audit;
 
     public ApproveExecutionCommandHandler(
         IWorkflowExecutionRepository repository,
-        IUnitOfWork unitOfWork,
         ITemporalService temporalService,
         IAuditService audit)
     {
         _repository = repository;
-        _unitOfWork = unitOfWork;
         _temporalService = temporalService;
         _audit = audit;
     }
@@ -31,12 +29,12 @@ public class ApproveExecutionCommandHandler : IRequestHandler<ApproveExecutionCo
         if (execution.TenantId != request.TenantId)
             throw new UnauthorizedAccessException("Access denied.");
 
-        execution.Approve();
+        if (execution.Status != ExecutionStatus.WaitingApproval)
+            throw new InvalidOperationException("Execution is not awaiting approval.");
+
+        await _repository.SetStatusAsync(request.ExecutionId, ExecutionStatus.Approved, null, null, cancellationToken);
         await _temporalService.SendApprovalSignalAsync(
             execution.TemporalWorkflowId, true, request.ActorId, cancellationToken: cancellationToken);
-
-        await _repository.UpdateAsync(execution, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _audit.LogAsync(request.TenantId, request.ActorId, request.ActorName,
             "ExecutionApproved", "Execution", execution.Id.ToString(), execution.TemporalWorkflowId,
@@ -47,18 +45,15 @@ public class ApproveExecutionCommandHandler : IRequestHandler<ApproveExecutionCo
 public class RejectExecutionCommandHandler : IRequestHandler<RejectExecutionCommand>
 {
     private readonly IWorkflowExecutionRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly ITemporalService _temporalService;
     private readonly IAuditService _audit;
 
     public RejectExecutionCommandHandler(
         IWorkflowExecutionRepository repository,
-        IUnitOfWork unitOfWork,
         ITemporalService temporalService,
         IAuditService audit)
     {
         _repository = repository;
-        _unitOfWork = unitOfWork;
         _temporalService = temporalService;
         _audit = audit;
     }
@@ -71,12 +66,12 @@ public class RejectExecutionCommandHandler : IRequestHandler<RejectExecutionComm
         if (execution.TenantId != request.TenantId)
             throw new UnauthorizedAccessException("Access denied.");
 
-        execution.Reject(request.Reason);
+        if (execution.Status != ExecutionStatus.WaitingApproval)
+            throw new InvalidOperationException("Execution is not awaiting approval.");
+
+        await _repository.SetStatusAsync(request.ExecutionId, ExecutionStatus.Rejected, request.Reason, DateTime.UtcNow, cancellationToken);
         await _temporalService.SendApprovalSignalAsync(
             execution.TemporalWorkflowId, false, request.ActorId, request.Reason, cancellationToken);
-
-        await _repository.UpdateAsync(execution, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _audit.LogAsync(request.TenantId, request.ActorId, request.ActorName,
             "ExecutionRejected", "Execution", execution.Id.ToString(), execution.TemporalWorkflowId,
