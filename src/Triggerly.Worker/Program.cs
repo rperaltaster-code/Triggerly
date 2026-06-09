@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Temporalio.Extensions.Hosting;
 using Triggerly.Infrastructure.Extensions;
+using Triggerly.Infrastructure.Persistence;
 using Triggerly.Shared.Contracts;
 using Triggerly.Worker.Activities;
 using Triggerly.Worker.Workflows;
@@ -22,4 +23,6 @@ builder.Services
     .AddScopedActivities<DataActivities>()
     .AddWorkflow<AutomationWorkflow>();
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+DbInitializer.EnsureCreated(host.Services);
+await host.RunAsync();

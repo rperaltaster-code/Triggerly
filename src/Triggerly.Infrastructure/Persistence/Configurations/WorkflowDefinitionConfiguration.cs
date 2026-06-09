@@ -19,7 +19,8 @@ public class WorkflowDefinitionConfiguration : IEntityTypeConfiguration<Workflow
         builder.HasMany(w => w.Steps)
             .WithOne()
             .HasForeignKey(s => s.WorkflowId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Cascade)
+            .Metadata.PrincipalToDependent!.SetPropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasIndex(w => w.TenantId);
         builder.HasIndex(w => new { w.TenantId, w.Status });

@@ -33,12 +33,14 @@ public class WorkflowExecutionConfiguration : IEntityTypeConfiguration<WorkflowE
         builder.HasMany(e => e.Steps)
             .WithOne()
             .HasForeignKey(s => s.ExecutionId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Cascade)
+            .Metadata.PrincipalToDependent!.SetPropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasMany(e => e.Comments)
             .WithOne()
             .HasForeignKey(c => c.ExecutionId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Cascade)
+            .Metadata.PrincipalToDependent!.SetPropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => new { e.TenantId, e.Status });
