@@ -56,6 +56,7 @@ export interface AutomationRule {
   executionCount: number
   lastTriggeredAt: string | null
   createdAt: string
+  webhookToken: string | null
 }
 
 export interface ExecutionStep {

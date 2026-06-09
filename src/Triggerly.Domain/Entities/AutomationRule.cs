@@ -16,6 +16,7 @@ public class AutomationRule
     public DateTime? LastTriggeredAt { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
+    public string? WebhookToken { get; private set; }
 
     public WorkflowDefinition? Workflow { get; private set; }
 
@@ -44,9 +45,20 @@ public class AutomationRule
             TenantId = tenantId,
             ExecutionCount = 0,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            WebhookToken = triggerType == TriggerType.Webhook ? GenerateToken() : null
         };
     }
+
+    public void RegenerateWebhookToken()
+    {
+        WebhookToken = GenerateToken();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    private static string GenerateToken() =>
+        Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+            .Replace("+", "-").Replace("/", "_").TrimEnd('=');
 
     public void Update(string name, string description, string triggerConfig)
     {

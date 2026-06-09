@@ -52,7 +52,7 @@ public class CreateAutomationRuleCommandHandler : IRequestHandler<CreateAutomati
             rule.Id, rule.Name, rule.Description, rule.TriggerType,
             rule.TriggerConfig, rule.WorkflowId, workflow.Name,
             rule.IsEnabled, rule.TenantId, rule.ExecutionCount,
-            rule.LastTriggeredAt, rule.CreatedAt);
+            rule.LastTriggeredAt, rule.CreatedAt, rule.WebhookToken);
     }
 }
 
@@ -89,7 +89,7 @@ public class UpdateAutomationRuleCommandHandler : IRequestHandler<UpdateAutomati
             rule.Id, rule.Name, rule.Description, rule.TriggerType,
             rule.TriggerConfig, rule.WorkflowId, workflow?.Name ?? string.Empty,
             rule.IsEnabled, rule.TenantId, rule.ExecutionCount,
-            rule.LastTriggeredAt, rule.CreatedAt);
+            rule.LastTriggeredAt, rule.CreatedAt, rule.WebhookToken);
     }
 }
 
