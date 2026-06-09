@@ -54,6 +54,14 @@ public class WorkflowRepository : IWorkflowRepository
         return Task.CompletedTask;
     }
 
+    public async Task RemoveAllStepsAsync(Guid workflowId, CancellationToken cancellationToken = default)
+    {
+        var steps = await _context.WorkflowSteps
+            .Where(s => s.WorkflowId == workflowId)
+            .ToListAsync(cancellationToken);
+        _context.WorkflowSteps.RemoveRange(steps);
+    }
+
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var workflow = await GetByIdAsync(id, cancellationToken);

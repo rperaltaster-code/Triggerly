@@ -106,5 +106,11 @@ public class WorkflowDefinition
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void ClearSteps()
+    {
+        _steps.Clear();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void ClearDomainEvents() => _domainEvents.Clear();
 }

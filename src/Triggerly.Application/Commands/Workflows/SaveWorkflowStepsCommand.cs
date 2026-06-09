@@ -38,8 +38,8 @@ public class SaveWorkflowStepsCommandHandler : IRequestHandler<SaveWorkflowSteps
         if (workflow.TenantId != request.TenantId)
             throw new UnauthorizedAccessException("Access denied.");
 
-        foreach (var step in workflow.Steps.ToList())
-            workflow.RemoveStep(step.Id);
+        await _repository.RemoveAllStepsAsync(request.WorkflowId, cancellationToken);
+        workflow.ClearSteps();
 
         foreach (var def in request.Steps)
         {
