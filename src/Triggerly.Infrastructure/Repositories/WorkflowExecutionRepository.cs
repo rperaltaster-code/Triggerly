@@ -47,7 +47,8 @@ public class WorkflowExecutionRepository : IWorkflowExecutionRepository
 
     public Task UpdateAsync(WorkflowExecution execution, CancellationToken cancellationToken = default)
     {
-        _context.Executions.Update(execution);
+        if (_context.Entry(execution).State == Microsoft.EntityFrameworkCore.EntityState.Detached)
+            _context.Executions.Update(execution);
         return Task.CompletedTask;
     }
 
