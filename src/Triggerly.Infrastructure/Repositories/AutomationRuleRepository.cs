@@ -49,4 +49,17 @@ public class AutomationRuleRepository : IAutomationRuleRepository
         var rule = await GetByIdAsync(id, cancellationToken);
         if (rule is not null) _context.AutomationRules.Remove(rule);
     }
+
+    public async Task<IReadOnlyList<AutomationRule>> GetEnabledScheduleRulesAsync(CancellationToken cancellationToken = default) =>
+        await _context.AutomationRules
+            .Where(r => r.IsEnabled && r.TriggerType == Triggerly.Shared.Models.TriggerType.Schedule)
+            .ToListAsync(cancellationToken);
+
+    public Task RecordTriggerAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _context.AutomationRules
+            .Where(r => r.Id == id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(r => r.LastTriggeredAt, DateTime.UtcNow)
+                .SetProperty(r => r.ExecutionCount, r => r.ExecutionCount + 1)
+                .SetProperty(r => r.UpdatedAt, DateTime.UtcNow), cancellationToken);
 }

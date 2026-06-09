@@ -8,6 +8,7 @@ using Triggerly.Application.Extensions;
 using Triggerly.Application.Interfaces;
 using Triggerly.Infrastructure.Extensions;
 using Triggerly.Infrastructure.Persistence;
+using Triggerly.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -69,6 +70,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddHostedService<SchedulerHostedService>();
 
 var app = builder.Build();
 
