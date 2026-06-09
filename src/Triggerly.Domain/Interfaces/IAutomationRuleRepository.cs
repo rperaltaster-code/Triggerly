@@ -11,6 +11,8 @@ public interface IAutomationRuleRepository
     Task<IReadOnlyList<AutomationRule>> GetByWorkflowIdAsync(Guid workflowId, CancellationToken cancellationToken = default);
     Task AddAsync(AutomationRule rule, CancellationToken cancellationToken = default);
     Task UpdateAsync(AutomationRule rule, CancellationToken cancellationToken = default);
+    Task UpdateDetailsAsync(Guid id, string name, string description, string triggerConfig, CancellationToken cancellationToken = default);
+    Task ToggleAsync(Guid id, bool enable, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AutomationRule>> GetEnabledScheduleRulesAsync(CancellationToken cancellationToken = default);
     Task RecordTriggerAsync(Guid id, CancellationToken cancellationToken = default);

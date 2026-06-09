@@ -7,27 +7,23 @@ namespace Triggerly.Application.Commands.Workflows;
 public class ActivateWorkflowCommandHandler : IRequestHandler<ActivateWorkflowCommand>
 {
     private readonly IWorkflowRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly IAuditService _audit;
 
-    public ActivateWorkflowCommandHandler(IWorkflowRepository repository, IUnitOfWork unitOfWork, IAuditService audit)
+    public ActivateWorkflowCommandHandler(IWorkflowRepository repository, IAuditService audit)
     {
         _repository = repository;
-        _unitOfWork = unitOfWork;
         _audit = audit;
     }
 
     public async Task Handle(ActivateWorkflowCommand request, CancellationToken cancellationToken)
     {
-        var workflow = await _repository.GetByIdWithStepsAsync(request.Id, cancellationToken)
+        var workflow = await _repository.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Workflow {request.Id} not found.");
 
         if (workflow.TenantId != request.TenantId)
             throw new UnauthorizedAccessException("Access denied.");
 
-        workflow.Activate();
-        await _repository.UpdateAsync(workflow, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _repository.ActivateAsync(request.Id, cancellationToken);
 
         await _audit.LogAsync(request.TenantId, request.UserId, request.UserName,
             "WorkflowActivated", "Workflow", workflow.Id.ToString(), workflow.Name,
@@ -38,13 +34,11 @@ public class ActivateWorkflowCommandHandler : IRequestHandler<ActivateWorkflowCo
 public class DeactivateWorkflowCommandHandler : IRequestHandler<DeactivateWorkflowCommand>
 {
     private readonly IWorkflowRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly IAuditService _audit;
 
-    public DeactivateWorkflowCommandHandler(IWorkflowRepository repository, IUnitOfWork unitOfWork, IAuditService audit)
+    public DeactivateWorkflowCommandHandler(IWorkflowRepository repository, IAuditService audit)
     {
         _repository = repository;
-        _unitOfWork = unitOfWork;
         _audit = audit;
     }
 
@@ -56,9 +50,7 @@ public class DeactivateWorkflowCommandHandler : IRequestHandler<DeactivateWorkfl
         if (workflow.TenantId != request.TenantId)
             throw new UnauthorizedAccessException("Access denied.");
 
-        workflow.Deactivate();
-        await _repository.UpdateAsync(workflow, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _repository.DeactivateAsync(request.Id, cancellationToken);
 
         await _audit.LogAsync(request.TenantId, request.UserId, request.UserName,
             "WorkflowDeactivated", "Workflow", workflow.Id.ToString(), workflow.Name,

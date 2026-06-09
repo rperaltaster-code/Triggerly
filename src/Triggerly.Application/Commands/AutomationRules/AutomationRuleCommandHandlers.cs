@@ -60,16 +60,13 @@ public class UpdateAutomationRuleCommandHandler : IRequestHandler<UpdateAutomati
 {
     private readonly IAutomationRuleRepository _repository;
     private readonly IWorkflowRepository _workflowRepository;
-    private readonly IUnitOfWork _unitOfWork;
 
     public UpdateAutomationRuleCommandHandler(
         IAutomationRuleRepository repository,
-        IWorkflowRepository workflowRepository,
-        IUnitOfWork unitOfWork)
+        IWorkflowRepository workflowRepository)
     {
         _repository = repository;
         _workflowRepository = workflowRepository;
-        _unitOfWork = unitOfWork;
     }
 
     public async Task<AutomationRuleDto> Handle(UpdateAutomationRuleCommand request, CancellationToken cancellationToken)
@@ -80,14 +77,12 @@ public class UpdateAutomationRuleCommandHandler : IRequestHandler<UpdateAutomati
         if (rule.TenantId != request.TenantId)
             throw new UnauthorizedAccessException("Access denied.");
 
-        rule.Update(request.Name, request.Description, request.TriggerConfig);
-        await _repository.UpdateAsync(rule, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _repository.UpdateDetailsAsync(request.Id, request.Name, request.Description, request.TriggerConfig, cancellationToken);
 
         var workflow = await _workflowRepository.GetByIdAsync(rule.WorkflowId, cancellationToken);
         return new AutomationRuleDto(
-            rule.Id, rule.Name, rule.Description, rule.TriggerType,
-            rule.TriggerConfig, rule.WorkflowId, workflow?.Name ?? string.Empty,
+            rule.Id, request.Name, request.Description, rule.TriggerType,
+            request.TriggerConfig, rule.WorkflowId, workflow?.Name ?? string.Empty,
             rule.IsEnabled, rule.TenantId, rule.ExecutionCount,
             rule.LastTriggeredAt, rule.CreatedAt, rule.WebhookToken);
     }
@@ -126,13 +121,11 @@ public class DeleteAutomationRuleCommandHandler : IRequestHandler<DeleteAutomati
 public class ToggleAutomationRuleCommandHandler : IRequestHandler<ToggleAutomationRuleCommand>
 {
     private readonly IAutomationRuleRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly IAuditService _audit;
 
-    public ToggleAutomationRuleCommandHandler(IAutomationRuleRepository repository, IUnitOfWork unitOfWork, IAuditService audit)
+    public ToggleAutomationRuleCommandHandler(IAutomationRuleRepository repository, IAuditService audit)
     {
         _repository = repository;
-        _unitOfWork = unitOfWork;
         _audit = audit;
     }
 
@@ -144,9 +137,7 @@ public class ToggleAutomationRuleCommandHandler : IRequestHandler<ToggleAutomati
         if (rule.TenantId != request.TenantId)
             throw new UnauthorizedAccessException("Access denied.");
 
-        if (request.Enable) rule.Enable(); else rule.Disable();
-        await _repository.UpdateAsync(rule, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _repository.ToggleAsync(request.Id, request.Enable, cancellationToken);
 
         await _audit.LogAsync(request.TenantId, request.UserId, request.UserName,
             request.Enable ? "AutomationRuleEnabled" : "AutomationRuleDisabled",

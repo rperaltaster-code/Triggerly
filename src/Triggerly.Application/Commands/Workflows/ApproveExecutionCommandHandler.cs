@@ -84,18 +84,15 @@ public class RejectExecutionCommandHandler : IRequestHandler<RejectExecutionComm
 public class CancelExecutionCommandHandler : IRequestHandler<CancelExecutionCommand>
 {
     private readonly IWorkflowExecutionRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly ITemporalService _temporalService;
     private readonly IAuditService _audit;
 
     public CancelExecutionCommandHandler(
         IWorkflowExecutionRepository repository,
-        IUnitOfWork unitOfWork,
         ITemporalService temporalService,
         IAuditService audit)
     {
         _repository = repository;
-        _unitOfWork = unitOfWork;
         _temporalService = temporalService;
         _audit = audit;
     }
@@ -108,10 +105,8 @@ public class CancelExecutionCommandHandler : IRequestHandler<CancelExecutionComm
         if (execution.TenantId != request.TenantId)
             throw new UnauthorizedAccessException("Access denied.");
 
-        execution.Cancel();
         await _temporalService.CancelWorkflowAsync(execution.TemporalWorkflowId, cancellationToken);
-        await _repository.UpdateAsync(execution, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _repository.SetStatusAsync(request.ExecutionId, ExecutionStatus.Cancelled, null, DateTime.UtcNow, cancellationToken);
 
         await _audit.LogAsync(request.TenantId, request.UserId, request.UserName,
             "ExecutionCancelled", "Execution", execution.Id.ToString(), execution.TemporalWorkflowId,

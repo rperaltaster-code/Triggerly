@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Logging;
 using Temporalio.Client;
+using Temporalio.Exceptions;
 using Triggerly.Application.Interfaces;
 using Triggerly.Shared.Contracts;
 
@@ -7,8 +9,13 @@ namespace Triggerly.Infrastructure.Temporal;
 public class TemporalService : ITemporalService
 {
     private readonly ITemporalClient _client;
+    private readonly ILogger<TemporalService> _logger;
 
-    public TemporalService(ITemporalClient client) => _client = client;
+    public TemporalService(ITemporalClient client, ILogger<TemporalService> logger)
+    {
+        _client = client;
+        _logger = logger;
+    }
 
     public async Task<string> StartWorkflowAsync(
         Guid workflowDefinitionId,
@@ -36,15 +43,29 @@ public class TemporalService : ITemporalService
         string temporalWorkflowId, bool approved, string actorId, string? reason = null,
         CancellationToken cancellationToken = default)
     {
-        var handle = _client.GetWorkflowHandle(temporalWorkflowId);
-        await handle.SignalAsync(
-            (IAutomationWorkflow wf) => wf.ApprovalSignalAsync(new ApprovalSignal(approved, actorId, reason)));
+        try
+        {
+            var handle = _client.GetWorkflowHandle(temporalWorkflowId);
+            await handle.SignalAsync(
+                (IAutomationWorkflow wf) => wf.ApprovalSignalAsync(new ApprovalSignal(approved, actorId, reason)));
+        }
+        catch (RpcException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Workflow {WorkflowId} not found in Temporal — signal skipped (DB already updated).", temporalWorkflowId);
+        }
     }
 
     public async Task CancelWorkflowAsync(string temporalWorkflowId, CancellationToken cancellationToken = default)
     {
-        var handle = _client.GetWorkflowHandle(temporalWorkflowId);
-        await handle.CancelAsync();
+        try
+        {
+            var handle = _client.GetWorkflowHandle(temporalWorkflowId);
+            await handle.CancelAsync();
+        }
+        catch (RpcException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Workflow {WorkflowId} not found in Temporal — cancel skipped (DB already updated).", temporalWorkflowId);
+        }
     }
 
     public async Task<string> GetWorkflowStatusAsync(string temporalWorkflowId, CancellationToken cancellationToken = default)

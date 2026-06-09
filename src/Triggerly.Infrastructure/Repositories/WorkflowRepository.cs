@@ -68,14 +68,28 @@ public class WorkflowRepository : IWorkflowRepository
         await _context.WorkflowSteps.AddRangeAsync(steps, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<WorkflowStep>> GetStepsAsync(Guid workflowId, CancellationToken cancellationToken = default)
-    {
-        return await _context.WorkflowSteps
-            .AsNoTracking()
-            .Where(s => s.WorkflowId == workflowId)
-            .OrderBy(s => s.Order)
-            .ToListAsync(cancellationToken);
-    }
+    public Task UpdateDetailsAsync(Guid id, string name, string description, CancellationToken cancellationToken = default) =>
+        _context.Workflows
+            .Where(w => w.Id == id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(w => w.Name, name)
+                .SetProperty(w => w.Description, description)
+                .SetProperty(w => w.UpdatedAt, DateTime.UtcNow), cancellationToken);
+
+    public Task ActivateAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _context.Workflows
+            .Where(w => w.Id == id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(w => w.Status, WorkflowStatus.Active)
+                .SetProperty(w => w.Version, w => w.Version + 1)
+                .SetProperty(w => w.UpdatedAt, DateTime.UtcNow), cancellationToken);
+
+    public Task DeactivateAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _context.Workflows
+            .Where(w => w.Id == id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(w => w.Status, WorkflowStatus.Inactive)
+                .SetProperty(w => w.UpdatedAt, DateTime.UtcNow), cancellationToken);
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -85,7 +99,4 @@ public class WorkflowRepository : IWorkflowRepository
 
     public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default) =>
         _context.Workflows.AnyAsync(w => w.Id == id, cancellationToken);
-
-    public Task<int> CountExecutionsAsync(Guid workflowId, CancellationToken cancellationToken = default) =>
-        _context.Executions.CountAsync(e => e.WorkflowId == workflowId, cancellationToken);
 }
