@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle, XCircle, X, RefreshCcw } from 'lucide-react'
 import { useExecutions, useApproveExecution, useRejectExecution, useCancelExecution } from '../hooks/useExecutions'
+import { RejectModal } from '../components/executions/RejectModal'
 import { Badge } from '../components/ui/Badge'
 import { formatDistanceToNow } from 'date-fns'
-import type { ExecutionStatus } from '../types'
+import type { ExecutionStatus, WorkflowExecution } from '../types'
 
 export function Executions() {
   const [statusFilter, setStatusFilter] = useState<ExecutionStatus | undefined>()
@@ -12,6 +13,7 @@ export function Executions() {
   const approve = useApproveExecution()
   const reject = useRejectExecution()
   const cancel = useCancelExecution()
+  const [rejectTarget, setRejectTarget] = useState<WorkflowExecution | null>(null)
 
   return (
     <div className="space-y-6">
@@ -81,10 +83,7 @@ export function Executions() {
                             <CheckCircle size={15} />
                           </button>
                           <button
-                            onClick={() => {
-                              const reason = prompt('Reason for rejection:')
-                              if (reason) reject.mutate({ id: ex.id, reason })
-                            }}
+                            onClick={() => setRejectTarget(ex)}
                             className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
                             title="Reject"
                           >
@@ -111,6 +110,16 @@ export function Executions() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {rejectTarget && (
+        <RejectModal
+          executionId={rejectTarget.id}
+          workflowName={rejectTarget.workflowName}
+          onConfirm={(id, reason) => reject.mutate({ id, reason }, { onSuccess: () => setRejectTarget(null) })}
+          onClose={() => setRejectTarget(null)}
+          isPending={reject.isPending}
+        />
       )}
     </div>
   )
