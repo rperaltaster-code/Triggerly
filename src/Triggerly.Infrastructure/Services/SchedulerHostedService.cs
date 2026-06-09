@@ -50,7 +50,7 @@ public class SchedulerHostedService : BackgroundService
                 var cron = ParseCron(rule.TriggerConfig);
                 if (cron is null) continue;
 
-                var from = rule.LastTriggeredAt ?? rule.CreatedAt;
+                var from = DateTime.SpecifyKind(rule.LastTriggeredAt ?? rule.CreatedAt, DateTimeKind.Utc);
                 var next = cron.GetNextOccurrence(from, TimeZoneInfo.Utc);
                 if (next is null || next > now) continue;
 
