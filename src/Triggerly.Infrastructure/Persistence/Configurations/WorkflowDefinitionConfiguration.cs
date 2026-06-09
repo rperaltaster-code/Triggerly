@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System.Text.Json;
 using Triggerly.Domain.Entities;
@@ -33,6 +34,11 @@ public class WorkflowStepConfiguration : IEntityTypeConfiguration<WorkflowStep>
 {
     private static readonly JsonSerializerOptions _jsonOptions = new();
 
+    private static readonly ValueComparer<Dictionary<string, object>> _dictComparer = new(
+        (a, b) => JsonSerializer.Serialize(a, _jsonOptions) == JsonSerializer.Serialize(b, _jsonOptions),
+        c => JsonSerializer.Serialize(c, _jsonOptions).GetHashCode(),
+        c => JsonSerializer.Deserialize<Dictionary<string, object>>(JsonSerializer.Serialize(c, _jsonOptions), _jsonOptions) ?? new());
+
     public void Configure(EntityTypeBuilder<WorkflowStep> builder)
     {
         builder.HasKey(s => s.Id);
@@ -43,6 +49,7 @@ public class WorkflowStepConfiguration : IEntityTypeConfiguration<WorkflowStep>
         builder.Property(s => s.Config)
             .HasConversion(
                 v => JsonSerializer.Serialize(v, _jsonOptions),
-                v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, _jsonOptions) ?? new());
+                v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, _jsonOptions) ?? new(),
+                _dictComparer);
     }
 }
