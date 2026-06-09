@@ -44,6 +44,22 @@ public class AutomationRuleRepository : IAutomationRuleRepository
         return Task.CompletedTask;
     }
 
+    public Task UpdateDetailsAsync(Guid id, string name, string description, string triggerConfig, CancellationToken cancellationToken = default) =>
+        _context.AutomationRules
+            .Where(r => r.Id == id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(r => r.Name, name)
+                .SetProperty(r => r.Description, description)
+                .SetProperty(r => r.TriggerConfig, triggerConfig)
+                .SetProperty(r => r.UpdatedAt, DateTime.UtcNow), cancellationToken);
+
+    public Task ToggleAsync(Guid id, bool enable, CancellationToken cancellationToken = default) =>
+        _context.AutomationRules
+            .Where(r => r.Id == id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(r => r.IsEnabled, enable)
+                .SetProperty(r => r.UpdatedAt, DateTime.UtcNow), cancellationToken);
+
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var rule = await GetByIdAsync(id, cancellationToken);

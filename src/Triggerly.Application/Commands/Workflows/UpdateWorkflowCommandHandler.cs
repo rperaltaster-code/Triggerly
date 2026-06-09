@@ -7,13 +7,8 @@ namespace Triggerly.Application.Commands.Workflows;
 public class UpdateWorkflowCommandHandler : IRequestHandler<UpdateWorkflowCommand, WorkflowDto>
 {
     private readonly IWorkflowRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
 
-    public UpdateWorkflowCommandHandler(IWorkflowRepository repository, IUnitOfWork unitOfWork)
-    {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-    }
+    public UpdateWorkflowCommandHandler(IWorkflowRepository repository) => _repository = repository;
 
     public async Task<WorkflowDto> Handle(UpdateWorkflowCommand request, CancellationToken cancellationToken)
     {
@@ -23,14 +18,12 @@ public class UpdateWorkflowCommandHandler : IRequestHandler<UpdateWorkflowComman
         if (workflow.TenantId != request.TenantId)
             throw new UnauthorizedAccessException("Access denied.");
 
-        workflow.Update(request.Name, request.Description);
-        await _repository.UpdateAsync(workflow, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _repository.UpdateDetailsAsync(request.Id, request.Name, request.Description, cancellationToken);
 
         return new WorkflowDto(
-            workflow.Id, workflow.Name, workflow.Description, workflow.Status,
+            workflow.Id, request.Name, request.Description, workflow.Status,
             workflow.TenantId, workflow.Version,
             workflow.Steps.Select(s => new WorkflowStepDto(s.Id, s.Name, s.Type, s.Order, s.Config, s.NextStepId)).ToList(),
-            workflow.CreatedAt, workflow.UpdatedAt);
+            workflow.CreatedAt, DateTime.UtcNow);
     }
 }

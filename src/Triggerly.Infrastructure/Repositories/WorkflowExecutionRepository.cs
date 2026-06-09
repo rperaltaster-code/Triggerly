@@ -64,15 +64,20 @@ public class WorkflowExecutionRepository : IWorkflowExecutionRepository
                 .SetProperty(e => e.CurrentStepOrder, stepOrder)
                 .SetProperty(e => e.CurrentStepName, stepName), cancellationToken);
 
-    public async Task CompleteStepAsync(Guid executionId, Guid stepId, bool success, string? errorMessage, CancellationToken cancellationToken = default)
-    {
-        var step = await _context.ExecutionSteps
-            .FirstOrDefaultAsync(s => s.ExecutionId == executionId && s.StepId == stepId, cancellationToken);
-        if (step is null) return;
+    public Task CompleteStepAsync(Guid executionId, Guid stepId, bool success, string? errorMessage, CancellationToken cancellationToken = default) =>
+        _context.ExecutionSteps
+            .Where(s => s.ExecutionId == executionId && s.StepId == stepId)
+            .ExecuteUpdateAsync(u => u
+                .SetProperty(s => s.Status, success ? ExecutionStatus.Completed : ExecutionStatus.Failed)
+                .SetProperty(s => s.ErrorMessage, success ? null : errorMessage ?? "Unknown error")
+                .SetProperty(s => s.CompletedAt, DateTime.UtcNow), cancellationToken);
 
-        if (success) step.Complete(null);
-        else step.Fail(errorMessage ?? "Unknown error");
-    }
+    public Task StartAsync(Guid executionId, string temporalRunId, CancellationToken cancellationToken = default) =>
+        _context.Executions
+            .Where(e => e.Id == executionId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(e => e.Status, ExecutionStatus.Running)
+                .SetProperty(e => e.TemporalRunId, temporalRunId), cancellationToken);
 
     public Task CompleteCurrentStepAsync(Guid executionId, bool success, string? errorMessage, CancellationToken cancellationToken = default)
     {

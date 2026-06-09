@@ -12,6 +12,7 @@ public interface IWorkflowExecutionRepository
         CancellationToken cancellationToken = default);
     Task AddAsync(WorkflowExecution execution, CancellationToken cancellationToken = default);
     Task UpdateAsync(WorkflowExecution execution, CancellationToken cancellationToken = default);
+    Task StartAsync(Guid executionId, string temporalRunId, CancellationToken cancellationToken = default);
     Task<bool> ExistsAsync(Guid id, string tenantId, CancellationToken cancellationToken = default);
     Task AddCommentAsync(ExecutionComment comment, CancellationToken cancellationToken = default);
     Task<bool> StepExistsAsync(Guid executionId, Guid stepId, CancellationToken cancellationToken = default);

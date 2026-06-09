@@ -55,7 +55,7 @@ public class TriggerWorkflowCommandHandlerTests
                 workflow.Id, It.IsAny<Guid>(), "tenant-1", null,
                 It.IsAny<List<WorkflowStepInput>>(), default))
             .ReturnsAsync(runId);
-        _executionRepo.Setup(r => r.UpdateAsync(It.IsAny<WorkflowExecution>(), default)).Returns(Task.CompletedTask);
+        _executionRepo.Setup(r => r.StartAsync(It.IsAny<Guid>(), runId, default)).Returns(Task.CompletedTask);
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
