@@ -36,12 +36,15 @@ public class WorkflowActivities
     }
 
     [Activity]
-    public async Task UpdateExecutionStatusAsync(Guid executionId, int stepOrder, string stepName, string status)
+    public async Task UpdateExecutionStatusAsync(Guid executionId, Guid stepId, int stepOrder, string stepName, string status)
     {
         var execution = await _executionRepository.GetByIdAsync(executionId)
             ?? throw new InvalidOperationException($"Execution {executionId} not found.");
 
         execution.UpdateCurrentStep(stepOrder, stepName);
+        if (execution.Steps.All(s => s.StepId != stepId))
+            execution.AddStep(stepId, stepName, stepOrder);
+
         await _executionRepository.UpdateAsync(execution);
         await _unitOfWork.SaveChangesAsync();
     }
