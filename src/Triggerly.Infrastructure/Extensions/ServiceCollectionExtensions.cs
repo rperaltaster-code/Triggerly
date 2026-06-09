@@ -19,8 +19,11 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        var connectionString = configuration.GetConnectionString("Default")
+            ?? $"Data Source={Path.Combine(AppContext.BaseDirectory, "triggerly.db")}";
+
         services.AddDbContext<AppDbContext>(options =>
-            options.UseInMemoryDatabase("TriggerlyDb"));
+            options.UseSqlite(connectionString));
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IWorkflowRepository, WorkflowRepository>();

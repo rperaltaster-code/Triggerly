@@ -7,6 +7,7 @@ using Triggerly.Api.Middleware;
 using Triggerly.Application.Extensions;
 using Triggerly.Application.Interfaces;
 using Triggerly.Infrastructure.Extensions;
+using Triggerly.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -70,6 +71,8 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddScoped<ITokenService, TokenService>();
 
 var app = builder.Build();
+
+DbInitializer.EnsureCreated(app.Services);
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
