@@ -177,24 +177,39 @@ export function StepConfigPanel({ node, onClose, onUpdate, formFields = [] }: St
                 <option value="slack">Slack</option>
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Recipient</label>
-              <input
-                value={strVal('recipient')}
-                onChange={(e) => setConfigField('recipient', e.target.value)}
-                placeholder="user@example.com"
-                {...makeDropHandlers('recipient', strVal('recipient'))}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {tokenPreview(config.recipient)}
-            </div>
+            {strVal('channel', 'email') === 'slack' ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Webhook URL
+                  <span className="ml-1 text-gray-400 font-normal">(overrides global)</span>
+                </label>
+                <input
+                  value={strVal('webhookUrl')}
+                  onChange={(e) => setConfigField('webhookUrl', e.target.value)}
+                  placeholder="https://hooks.slack.com/services/..."
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Recipient</label>
+                <input
+                  value={strVal('recipient')}
+                  onChange={(e) => setConfigField('recipient', e.target.value)}
+                  placeholder="user@example.com"
+                  {...makeDropHandlers('recipient', strVal('recipient'))}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {tokenPreview(config.recipient)}
+              </div>
+            )}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Message</label>
               <textarea
                 value={strVal('message')}
                 onChange={(e) => setConfigField('message', e.target.value)}
                 rows={3}
-                placeholder="Notification message..."
+                placeholder={strVal('channel', 'email') === 'slack' ? 'Supports Slack mrkdwn formatting...' : 'Notification message...'}
                 {...makeDropHandlers('message', strVal('message'))}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
