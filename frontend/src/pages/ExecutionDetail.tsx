@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, CheckCircle, XCircle, Clock, AlertTriangle, MessageSquare, Send } from 'lucide-react'
-import { useExecution, useApproveExecution, useRejectExecution, useAddComment } from '../hooks/useExecutions'
+import { ArrowLeft, CheckCircle, XCircle, Clock, AlertTriangle, MessageSquare, Send, Ban } from 'lucide-react'
+import { useExecution, useApproveExecution, useRejectExecution, useCancelExecution, useAddComment } from '../hooks/useExecutions'
 import { RejectModal } from '../components/executions/RejectModal'
 import { Badge } from '../components/ui/Badge'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -25,9 +25,11 @@ export function ExecutionDetail() {
   const { data: execution, isLoading } = useExecution(id!)
   const approve = useApproveExecution()
   const reject = useRejectExecution()
+  const cancel = useCancelExecution()
   const addComment = useAddComment(id!)
   const [commentText, setCommentText] = useState('')
   const [showRejectModal, setShowRejectModal] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
   if (isLoading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>
   if (!execution) return <div className="text-center py-12 text-gray-500">Execution not found</div>
@@ -63,24 +65,58 @@ export function ExecutionDetail() {
           </div>
           <p className="text-gray-400 text-sm font-mono mt-0.5">{execution.temporalWorkflowId}</p>
         </div>
-        {execution.status === 'WaitingApproval' && (
-          <div className="flex gap-2">
+        <div className="flex gap-2">
+          {execution.status === 'WaitingApproval' && (
+            <>
+              <button
+                onClick={() => approve.mutate(execution.id)}
+                disabled={approve.isPending}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50"
+              >
+                <CheckCircle size={15} /> Approve
+              </button>
+              <button
+                onClick={() => setShowRejectModal(true)}
+                className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm"
+              >
+                <XCircle size={15} /> Reject
+              </button>
+            </>
+          )}
+          {(execution.status === 'Running' || execution.status === 'WaitingApproval' || execution.status === 'Pending') && (
             <button
-              onClick={() => approve.mutate(execution.id)}
-              disabled={approve.isPending}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50"
+              onClick={() => setShowCancelConfirm(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm"
             >
-              <CheckCircle size={15} /> Approve
+              <Ban size={15} /> Cancel
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showCancelConfirm && (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Ban size={18} className="text-orange-500 flex-shrink-0" />
+            <p className="text-sm font-medium text-orange-800">Cancel this execution? This cannot be undone.</p>
+          </div>
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={() => setShowCancelConfirm(false)}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Dismiss
             </button>
             <button
-              onClick={() => setShowRejectModal(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm"
+              onClick={() => cancel.mutate(execution.id, { onSuccess: () => setShowCancelConfirm(false) })}
+              disabled={cancel.isPending}
+              className="px-3 py-1.5 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
             >
-              <XCircle size={15} /> Reject
+              {cancel.isPending ? 'Cancelling...' : 'Confirm Cancel'}
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         {[
