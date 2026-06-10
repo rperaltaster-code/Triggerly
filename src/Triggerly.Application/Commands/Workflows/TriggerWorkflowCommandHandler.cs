@@ -61,6 +61,7 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
             workflow.Id,
             execution.Id,
             request.TenantId,
+            workflow.Name,
             request.InputData,
             steps,
             cancellationToken);

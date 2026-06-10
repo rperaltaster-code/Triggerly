@@ -8,6 +8,7 @@ public interface ITemporalService
         Guid workflowDefinitionId,
         Guid executionId,
         string tenantId,
+        string workflowName,
         Dictionary<string, object>? inputData,
         List<WorkflowStepInput> steps,
         CancellationToken cancellationToken = default);

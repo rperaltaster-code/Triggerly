@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Temporalio.Activities;
 using Triggerly.Application.Interfaces;
 
@@ -6,8 +7,13 @@ namespace Triggerly.Worker.Activities;
 public class NotificationActivities
 {
     private readonly IEmailService _emailService;
+    private readonly string _baseUrl;
 
-    public NotificationActivities(IEmailService emailService) => _emailService = emailService;
+    public NotificationActivities(IEmailService emailService, IConfiguration configuration)
+    {
+        _emailService = emailService;
+        _baseUrl = configuration["App:BaseUrl"] ?? "http://localhost:5173";
+    }
 
     [Activity]
     public async Task SendNotificationAsync(string tenantId, Dictionary<string, object> config, Dictionary<string, object> context)
@@ -38,6 +44,7 @@ public class NotificationActivities
     public async Task SendApprovalRequestNotificationAsync(
         string approverEmail, string stepName, string executionId, string workflowName)
     {
+        var approvalsUrl = $"{_baseUrl}/approvals";
         await _emailService.SendAsync(
             approverEmail,
             $"Approval Required: {workflowName} — {stepName}",
@@ -48,7 +55,7 @@ public class NotificationActivities
               <li><strong>Step:</strong> {stepName}</li>
               <li><strong>Execution ID:</strong> <code>{executionId}</code></li>
             </ul>
-            <p>Please review and approve or reject this step in Triggerly.</p>
+            <p><a href="{approvalsUrl}">Review and approve or reject this step in Triggerly</a></p>
             """,
             ActivityExecutionContext.Current.CancellationToken);
     }
