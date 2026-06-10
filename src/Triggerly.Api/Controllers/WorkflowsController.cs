@@ -96,6 +96,18 @@ public class WorkflowsController : ControllerBase
     }
 
     [Authorize(Roles = "Admin,Editor")]
+    [HttpPut("{id:guid}/form")]
+    public async Task<IActionResult> SaveForm(
+        Guid id,
+        [FromBody] SaveFormRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(
+            new SaveWorkflowFormCommand(id, TenantId, request.Fields ?? []), cancellationToken);
+        return Ok(result);
+    }
+
+    [Authorize(Roles = "Admin,Editor")]
     [HttpPut("{id:guid}/steps")]
     public async Task<IActionResult> SaveSteps(
         Guid id,
@@ -113,6 +125,7 @@ public class WorkflowsController : ControllerBase
 }
 
 public record CreateWorkflowRequest(string Name, string? Description);
+public record SaveFormRequest(List<FormField>? Fields);
 public record TriggerWorkflowRequest(Dictionary<string, object>? InputData);
 
 public record SaveStepsRequest(List<StepRequest> Steps);

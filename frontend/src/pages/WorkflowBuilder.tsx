@@ -8,12 +8,15 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { ArrowLeft, Save, Loader2, CheckCircle } from 'lucide-react'
-import { useWorkflow } from '../hooks/useWorkflows'
+import { useWorkflow, useSaveWorkflowForm } from '../hooks/useWorkflows'
 import { workflowsApi } from '../api/workflows'
 import { StepNode, type StepNodeData } from '../components/builder/StepNode'
 import { StepPalette } from '../components/builder/StepPalette'
 import { StepConfigPanel } from '../components/builder/StepConfigPanel'
-import type { StepType } from '../types'
+import { FormBuilder } from '../components/builder/FormBuilder'
+import type { FormField, StepType } from '../types'
+
+type BuilderTab = 'steps' | 'form'
 
 const nodeTypes = { stepNode: StepNode }
 
@@ -21,6 +24,10 @@ function BuilderCanvas() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: workflow, isLoading } = useWorkflow(id!)
+  const saveForm = useSaveWorkflowForm()
+  const [activeTab, setActiveTab] = useState<BuilderTab>('steps')
+  const [formFields, setFormFields] = useState<FormField[]>([])
+  const [formInitialized, setFormInitialized] = useState(false)
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
@@ -30,6 +37,12 @@ function BuilderCanvas() {
   const [initialized, setInitialized] = useState(false)
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [rfInstance, setRfInstance] = useState<ReturnType<typeof import('@xyflow/react').useReactFlow> | null>(null)
+
+  // Seed form fields from loaded workflow (once)
+  if (workflow && !formInitialized) {
+    setFormInitialized(true)
+    setFormFields(workflow.formSchema ?? [])
+  }
 
   // Initialize nodes from loaded workflow (once)
   if (workflow && !initialized) {
@@ -134,18 +147,22 @@ function BuilderCanvas() {
     setSaving(true)
     setSaveError('')
     try {
-      const sortedNodes = [...nodes].sort((a, b) => a.position.y - b.position.y)
-      const steps = sortedNodes.map((node, i) => {
-        const data = node.data as StepNodeData
-        return {
-          name: data.name,
-          type: data.type,
-          order: i + 1,
-          config: data.config ?? {},
-          approverEmail: data.approverEmail ?? null,
-        }
-      })
-      await workflowsApi.saveSteps(id, steps)
+      if (activeTab === 'form') {
+        await saveForm.mutateAsync({ id, fields: formFields })
+      } else {
+        const sortedNodes = [...nodes].sort((a, b) => a.position.y - b.position.y)
+        const steps = sortedNodes.map((node, i) => {
+          const data = node.data as StepNodeData
+          return {
+            name: data.name,
+            type: data.type,
+            order: i + 1,
+            config: data.config ?? {},
+            approverEmail: data.approverEmail ?? null,
+          }
+        })
+        await workflowsApi.saveSteps(id, steps)
+      }
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (err) {
@@ -178,15 +195,39 @@ function BuilderCanvas() {
         >
           <ArrowLeft size={18} />
         </button>
-        <div className="flex-1">
-          <h1 className="font-semibold text-gray-900 text-sm">{workflow?.name}</h1>
-          <p className="text-xs text-gray-400">{nodes.length} step{nodes.length !== 1 ? 's' : ''}</p>
+        <div className="flex-1 min-w-0">
+          <h1 className="font-semibold text-gray-900 text-sm truncate">{workflow?.name}</h1>
+          <p className="text-xs text-gray-400">
+            {activeTab === 'steps'
+              ? `${nodes.length} step${nodes.length !== 1 ? 's' : ''}`
+              : `${formFields.length} form field${formFields.length !== 1 ? 's' : ''}`}
+          </p>
         </div>
+
+        {/* Tab switcher */}
+        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+          {(['steps', 'form'] as BuilderTab[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors capitalize ${
+                activeTab === tab
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              {tab === 'steps' ? 'Steps' : 'Trigger Form'}
+            </button>
+          ))}
+        </div>
+
         {saveError ? (
           <p className="text-xs text-red-500 hidden sm:block">{saveError}</p>
         ) : (
           <p className="text-xs text-gray-400 hidden sm:block">
-            Drag steps from the palette → drop on canvas → click to configure
+            {activeTab === 'steps'
+              ? 'Drag steps from the palette → drop on canvas → click to configure'
+              : 'Define fields collected when this workflow is triggered'}
           </p>
         )}
         <button
@@ -204,7 +245,23 @@ function BuilderCanvas() {
         </button>
       </div>
 
-      {/* Main area */}
+      {/* Form builder panel */}
+      {activeTab === 'form' && (
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+          <div className="max-w-2xl mx-auto">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Trigger Form</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Fields shown to the user before they can trigger this workflow. Values are passed as input data.
+              </p>
+            </div>
+            <FormBuilder fields={formFields} onChange={setFormFields} />
+          </div>
+        </div>
+      )}
+
+      {/* Main canvas area */}
+      {activeTab === 'steps' && (
       <div className="flex flex-1 overflow-hidden">
         <StepPalette onDragStart={onDragStart} />
 
@@ -257,6 +314,7 @@ function BuilderCanvas() {
           />
         )}
       </div>
+      )}
     </div>
   )
 }

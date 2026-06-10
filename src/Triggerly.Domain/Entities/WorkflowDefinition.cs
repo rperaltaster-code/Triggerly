@@ -17,6 +17,7 @@ public class WorkflowDefinition
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public string CreatedBy { get; private set; } = string.Empty;
+    public List<FormField> FormSchema { get; private set; } = [];
 
     public IReadOnlyList<WorkflowStep> Steps => _steps.AsReadOnly();
     public IReadOnlyList<object> DomainEvents => _domainEvents.AsReadOnly();
@@ -109,6 +110,12 @@ public class WorkflowDefinition
     public void ClearSteps()
     {
         _steps.Clear();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetFormSchema(List<FormField> fields)
+    {
+        FormSchema = fields ?? [];
         UpdatedAt = DateTime.UtcNow;
     }
 

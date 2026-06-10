@@ -27,7 +27,7 @@ public class GetWorkflowByIdQueryHandler : IRequestHandler<GetWorkflowByIdQuery,
             workflow.Steps.OrderBy(s => s.Order)
                 .Select(s => new WorkflowStepDto(s.Id, s.Name, s.Type, s.Order, s.Config, s.NextStepId))
                 .ToList(),
-            workflow.CreatedAt, workflow.UpdatedAt);
+            workflow.CreatedAt, workflow.UpdatedAt, workflow.FormSchema);
     }
 }
 
@@ -54,7 +54,7 @@ public class ListWorkflowsQueryHandler : IRequestHandler<ListWorkflowsQuery, Pag
             var count = await _executionRepository.CountByStatusAsync(
                 request.TenantId, Shared.Models.ExecutionStatus.Completed, cancellationToken);
             summaries.Add(new WorkflowSummaryDto(
-                w.Id, w.Name, w.Status, w.Version, w.Steps.Count, count, w.UpdatedAt));
+                w.Id, w.Name, w.Status, w.Version, w.Steps.Count, count, w.UpdatedAt, w.FormSchema.Count > 0));
         }
 
         return new PagedResult<WorkflowSummaryDto>(summaries, totalCount, request.Page, request.PageSize);

@@ -3,11 +3,19 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System.Text.Json;
 using Triggerly.Domain.Entities;
+using Triggerly.Shared.Models;
 
 namespace Triggerly.Infrastructure.Persistence.Configurations;
 
 public class WorkflowDefinitionConfiguration : IEntityTypeConfiguration<WorkflowDefinition>
 {
+    private static readonly JsonSerializerOptions _jsonOptions = new();
+
+    private static readonly ValueComparer<List<FormField>> _formSchemaComparer = new(
+        (a, b) => JsonSerializer.Serialize(a, _jsonOptions) == JsonSerializer.Serialize(b, _jsonOptions),
+        c => JsonSerializer.Serialize(c, _jsonOptions).GetHashCode(),
+        c => JsonSerializer.Deserialize<List<FormField>>(JsonSerializer.Serialize(c, _jsonOptions), _jsonOptions) ?? new List<FormField>());
+
     public void Configure(EntityTypeBuilder<WorkflowDefinition> builder)
     {
         builder.HasKey(w => w.Id);
@@ -16,6 +24,12 @@ public class WorkflowDefinitionConfiguration : IEntityTypeConfiguration<Workflow
         builder.Property(w => w.TenantId).IsRequired().HasMaxLength(100);
         builder.Property(w => w.CreatedBy).HasMaxLength(200);
         builder.Property(w => w.Status).HasConversion<int>();
+
+        builder.Property(w => w.FormSchema)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, _jsonOptions),
+                v => JsonSerializer.Deserialize<List<FormField>>(v, _jsonOptions) ?? new List<FormField>(),
+                _formSchemaComparer);
 
         builder.HasMany(w => w.Steps)
             .WithOne()
