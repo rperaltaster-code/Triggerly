@@ -60,6 +60,8 @@ public class AutomationWorkflow : IAutomationWorkflow
 
                         var slaHours = resolvedConfig.TryGetValue("slaHours", out var h)
                             ? Convert.ToInt32(h) : 72;
+                        var reminderPercents = GetIntList(resolvedConfig, "reminderAtPercent");
+                        var escalationEmail = GetString(resolvedConfig, "escalationEmail");
 
                         await Workflow.ExecuteActivityAsync(
                             (WorkflowActivities act) => act.RequestApprovalAsync(
@@ -75,11 +77,42 @@ public class AutomationWorkflow : IAutomationWorkflow
                                 activityOptions);
                         }
 
-                        var approved = await Workflow.WaitConditionAsync(
-                            () => _approvalSignal != null,
-                            TimeSpan.FromHours(slaHours));
+                        // Incremental waiting with reminders at configured SLA percentages
+                        var breakpoints = reminderPercents.OrderBy(p => p).Append(100).ToList();
+                        double prevPct = 0;
+                        bool signalReceived = false;
 
-                        if (!approved)
+                        foreach (var pct in breakpoints)
+                        {
+                            var incrementHours = slaHours * (pct - prevPct) / 100.0;
+                            signalReceived = await Workflow.WaitConditionAsync(
+                                () => _approvalSignal != null,
+                                TimeSpan.FromHours(incrementHours));
+
+                            if (signalReceived) break;
+
+                            if (pct < 100)
+                            {
+                                if (!string.IsNullOrEmpty(currentStep.ApproverEmail))
+                                    await Workflow.ExecuteActivityAsync(
+                                        (NotificationActivities act) => act.SendApprovalReminderAsync(
+                                            currentStep.ApproverEmail, currentStep.Name,
+                                            input.ExecutionId.ToString(), input.WorkflowName, pct, slaHours),
+                                        activityOptions);
+
+                                // Escalate at the last reminder threshold
+                                if (!string.IsNullOrEmpty(escalationEmail) && pct == breakpoints[^2])
+                                    await Workflow.ExecuteActivityAsync(
+                                        (NotificationActivities act) => act.SendEscalationNotificationAsync(
+                                            escalationEmail, currentStep.ApproverEmail, currentStep.Name,
+                                            input.ExecutionId.ToString(), input.WorkflowName, slaHours),
+                                        activityOptions);
+                            }
+
+                            prevPct = pct;
+                        }
+
+                        if (!signalReceived)
                         {
                             var timeoutReason = $"SLA timeout: no response within {slaHours} hours";
                             _currentStatus = "TimedOut";
@@ -231,4 +264,22 @@ public class AutomationWorkflow : IAutomationWorkflow
         JsonElement je => je.ValueKind == JsonValueKind.String ? je.GetString() : je.ToString(),
         _ => v?.ToString()
     };
+
+    private static List<int> GetIntList(Dictionary<string, object> config, string key)
+    {
+        if (!config.TryGetValue(key, out var raw)) return [];
+
+        // Array from JSON deserialization
+        if (raw is JsonElement je && je.ValueKind == JsonValueKind.Array)
+            return je.EnumerateArray().Select(e => e.GetInt32()).ToList();
+
+        // Comma-separated string (e.g. "50, 80")
+        var str = raw is string s ? s : raw?.ToString();
+        if (string.IsNullOrWhiteSpace(str)) return [];
+        return str.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                  .Select(p => int.TryParse(p, out var n) ? n : (int?)null)
+                  .Where(n => n.HasValue)
+                  .Select(n => n!.Value)
+                  .ToList();
+    }
 }
