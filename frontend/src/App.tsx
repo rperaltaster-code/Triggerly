@@ -13,6 +13,7 @@ import { ExecutionDetail } from './pages/ExecutionDetail'
 import { AutomationRules } from './pages/AutomationRules'
 import { Approvals } from './pages/Approvals'
 import { AuditLogPage } from './pages/AuditLogPage'
+import { Settings } from './pages/Settings'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -40,6 +41,7 @@ function AppRoutes() {
         <Route path="/automation" element={<AutomationRules />} />
         <Route path="/approvals" element={<Approvals />} />
         <Route path="/audit" element={<AuditLogPage />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>
   )

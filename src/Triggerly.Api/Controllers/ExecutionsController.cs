@@ -41,6 +41,7 @@ public class ExecutionsController : ControllerBase
         return result is null ? NotFound() : Ok(result);
     }
 
+    [Authorize(Roles = "Admin,Approver")]
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve(Guid id, CancellationToken cancellationToken = default)
     {
@@ -48,6 +49,7 @@ public class ExecutionsController : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = "Admin,Approver")]
     [HttpPost("{id:guid}/reject")]
     public async Task<IActionResult> Reject(Guid id, [FromBody] RejectRequest request, CancellationToken cancellationToken = default)
     {
@@ -55,6 +57,7 @@ public class ExecutionsController : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = "Admin,Editor")]
     [HttpPost("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken cancellationToken = default)
     {

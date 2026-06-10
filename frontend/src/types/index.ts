@@ -1,8 +1,18 @@
+export type UserRole = 'Viewer' | 'Approver' | 'Editor' | 'Admin'
+
 export interface AuthUser {
   id: string
   name: string
   email: string
   tenantId: string
+  role: UserRole
+}
+
+export interface TeamMember {
+  userId: string
+  name: string
+  email: string
+  role: UserRole
 }
 
 export type WorkflowStatus = 'Draft' | 'Active' | 'Inactive' | 'Archived'

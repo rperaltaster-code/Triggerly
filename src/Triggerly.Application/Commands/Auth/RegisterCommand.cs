@@ -3,6 +3,7 @@ using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Entities;
 using Triggerly.Domain.Interfaces;
 using Triggerly.Shared.DTOs;
+using Triggerly.Shared.Models;
 
 namespace Triggerly.Application.Commands.Auth;
 
@@ -11,17 +12,20 @@ public record RegisterCommand(string Name, string Email, string Password) : IReq
 public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterResponseDto>
 {
     private readonly IUserRepository _userRepository;
+    private readonly ITenantRoleRepository _roleRepository;
     private readonly ITokenService _tokenService;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IUnitOfWork _unitOfWork;
 
     public RegisterCommandHandler(
         IUserRepository userRepository,
+        ITenantRoleRepository roleRepository,
         ITokenService tokenService,
         IPasswordHasher passwordHasher,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
+        _roleRepository = roleRepository;
         _tokenService = tokenService;
         _passwordHasher = passwordHasher;
         _unitOfWork = unitOfWork;
@@ -38,7 +42,11 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterR
         await _userRepository.AddAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var token = _tokenService.GenerateToken(user);
-        return new RegisterResponseDto(token, new AuthUserDto(user.Id, user.Name, user.Email, user.TenantId));
+        var tenantRole = TenantRole.Create(user.Id, user.TenantId, UserRole.Admin);
+        await _roleRepository.AddAsync(tenantRole, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var token = _tokenService.GenerateToken(user, UserRole.Admin.ToString());
+        return new RegisterResponseDto(token, new AuthUserDto(user.Id, user.Name, user.Email, user.TenantId, UserRole.Admin.ToString()));
     }
 }
