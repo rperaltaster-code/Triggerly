@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ITenantRoleRepository, TenantRoleRepository>();
+        services.AddScoped<IWorkflowVersionRepository, WorkflowVersionRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IAuditService, AuditService>();
 

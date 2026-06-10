@@ -20,7 +20,15 @@ public record WorkflowExecutionDto(
     DateTime? CompletedAt,
     DateTime? SlaBreachedAt,
     List<ExecutionStepDto> Steps,
-    List<ExecutionCommentDto> Comments
+    List<ExecutionCommentDto> Comments,
+    int WorkflowVersionNumber
+);
+
+public record WorkflowVersionDto(
+    Guid Id,
+    int VersionNumber,
+    DateTime CreatedAt,
+    string CreatedBy
 );
 
 public record ExecutionStepDto(

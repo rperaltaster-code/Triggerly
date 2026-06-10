@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Workflow, WorkflowSummary, WorkflowExecution, PagedResult, WorkflowStatus, FormField } from '../types'
+import type { Workflow, WorkflowSummary, WorkflowExecution, WorkflowVersion, PagedResult, WorkflowStatus, FormField } from '../types'
 
 export const workflowsApi = {
   list: (params?: { page?: number; pageSize?: number; status?: WorkflowStatus; search?: string }) =>
@@ -30,4 +30,7 @@ export const workflowsApi = {
 
   saveForm: (id: string, fields: FormField[]) =>
     api.put<Workflow>(`/workflows/${id}/form`, { fields }).then((r) => r.data),
+
+  getVersions: (id: string) =>
+    api.get<WorkflowVersion[]>(`/workflows/${id}/versions`).then((r) => r.data),
 }

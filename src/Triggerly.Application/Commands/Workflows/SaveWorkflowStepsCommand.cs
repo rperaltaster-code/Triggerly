@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MediatR;
 using Triggerly.Domain.Entities;
 using Triggerly.Domain.Interfaces;
@@ -23,11 +24,16 @@ public record SaveWorkflowStepsCommand(
 public class SaveWorkflowStepsCommandHandler : IRequestHandler<SaveWorkflowStepsCommand, WorkflowDto>
 {
     private readonly IWorkflowRepository _repository;
+    private readonly IWorkflowVersionRepository _versionRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public SaveWorkflowStepsCommandHandler(IWorkflowRepository repository, IUnitOfWork unitOfWork)
+    public SaveWorkflowStepsCommandHandler(
+        IWorkflowRepository repository,
+        IWorkflowVersionRepository versionRepository,
+        IUnitOfWork unitOfWork)
     {
         _repository = repository;
+        _versionRepository = versionRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -63,6 +69,15 @@ public class SaveWorkflowStepsCommandHandler : IRequestHandler<SaveWorkflowSteps
             ordered[i].SetNextStep(ordered[i + 1].Id);
 
         await _repository.AddStepsAsync(newSteps, cancellationToken);
+
+        // Snapshot the new step set as a new version
+        var nextVersionNumber = await _versionRepository.CountByWorkflowAsync(request.WorkflowId, cancellationToken) + 1;
+        var stepsJson = JsonSerializer.Serialize(newSteps.OrderBy(s => s.Order).Select(s => new {
+            s.Id, s.Name, s.Type, s.Order, s.Config, s.ApproverEmail
+        }));
+        var version = WorkflowVersion.Create(request.WorkflowId, nextVersionNumber, stepsJson, request.TenantId);
+        await _versionRepository.AddAsync(version, cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new WorkflowDto(

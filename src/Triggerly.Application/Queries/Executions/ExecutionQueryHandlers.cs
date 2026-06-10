@@ -45,7 +45,8 @@ public class GetExecutionByIdQueryHandler : IRequestHandler<GetExecutionByIdQuer
                 s.Id, s.StepId, s.StepName, s.Status, s.Order,
                 s.Output, s.ErrorMessage, s.StartedAt, s.CompletedAt)).ToList(),
             execution.Comments.Select(c => new ExecutionCommentDto(
-                c.Id, c.ExecutionId, c.AuthorId, c.AuthorName, c.Content, c.CreatedAt)).ToList());
+                c.Id, c.ExecutionId, c.AuthorId, c.AuthorName, c.Content, c.CreatedAt)).ToList(),
+            execution.WorkflowVersionNumber);
     }
 }
 
@@ -75,7 +76,8 @@ public class ListExecutionsQueryHandler : IRequestHandler<ListExecutionsQuery, P
                 execution.TemporalWorkflowId, execution.TemporalRunId, execution.Status,
                 execution.TenantId, execution.TriggeredBy, execution.InputData, execution.OutputData,
                 execution.ErrorMessage, execution.CurrentStepOrder, execution.CurrentStepName,
-                execution.StartedAt, execution.CompletedAt, execution.SlaBreachedAt, [], []));
+                execution.StartedAt, execution.CompletedAt, execution.SlaBreachedAt, [], [],
+                execution.WorkflowVersionNumber));
         }
 
         return new PagedResult<WorkflowExecutionDto>(dtos, totalCount, request.Page, request.PageSize);

@@ -13,6 +13,7 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<WorkflowDefinition> Workflows => Set<WorkflowDefinition>();
     public DbSet<WorkflowStep> WorkflowSteps => Set<WorkflowStep>();
+    public DbSet<WorkflowVersion> WorkflowVersions => Set<WorkflowVersion>();
     public DbSet<AutomationRule> AutomationRules => Set<AutomationRule>();
     public DbSet<WorkflowExecution> Executions => Set<WorkflowExecution>();
     public DbSet<ExecutionStep> ExecutionSteps => Set<ExecutionStep>();

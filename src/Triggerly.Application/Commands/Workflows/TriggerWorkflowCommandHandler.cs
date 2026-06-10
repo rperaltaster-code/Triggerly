@@ -12,6 +12,7 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
 {
     private readonly IWorkflowRepository _workflowRepository;
     private readonly IWorkflowExecutionRepository _executionRepository;
+    private readonly IWorkflowVersionRepository _versionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITemporalService _temporalService;
     private readonly IAuditService _audit;
@@ -19,12 +20,14 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
     public TriggerWorkflowCommandHandler(
         IWorkflowRepository workflowRepository,
         IWorkflowExecutionRepository executionRepository,
+        IWorkflowVersionRepository versionRepository,
         IUnitOfWork unitOfWork,
         ITemporalService temporalService,
         IAuditService audit)
     {
         _workflowRepository = workflowRepository;
         _executionRepository = executionRepository;
+        _versionRepository = versionRepository;
         _unitOfWork = unitOfWork;
         _temporalService = temporalService;
         _audit = audit;
@@ -41,6 +44,8 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
         if (workflow.Status != WorkflowStatus.Active)
             throw new InvalidOperationException("Only active workflows can be triggered.");
 
+        var latestVersion = await _versionRepository.GetLatestByWorkflowAsync(workflow.Id, cancellationToken);
+
         var temporalWorkflowId = $"triggerly-{workflow.Id}-{Guid.NewGuid():N}";
 
         var execution = WorkflowExecution.Create(
@@ -49,6 +54,9 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
             request.TenantId,
             request.TriggeredByName ?? request.TriggeredBy,
             request.InputData);
+
+        if (latestVersion is not null)
+            execution.SetVersion(latestVersion.Id, latestVersion.VersionNumber);
 
         await _executionRepository.AddAsync(execution, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -96,5 +104,6 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
             execution.CompletedAt,
             execution.SlaBreachedAt,
             [],
-            []);
+            [],
+            execution.WorkflowVersionNumber);
 }

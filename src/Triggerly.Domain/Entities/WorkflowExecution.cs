@@ -23,6 +23,9 @@ public class WorkflowExecution
     public DateTime? CompletedAt { get; private set; }
     public DateTime? SlaBreachedAt { get; private set; }
 
+    public Guid? WorkflowVersionId { get; private set; }
+    public int WorkflowVersionNumber { get; private set; }
+
     public WorkflowDefinition? Workflow { get; private set; }
     public IReadOnlyList<ExecutionStep> Steps => _steps.AsReadOnly();
     public IReadOnlyList<ExecutionComment> Comments => _comments.AsReadOnly();
@@ -107,6 +110,12 @@ public class WorkflowExecution
     public void MarkSlaBreached()
     {
         SlaBreachedAt = DateTime.UtcNow;
+    }
+
+    public void SetVersion(Guid versionId, int versionNumber)
+    {
+        WorkflowVersionId = versionId;
+        WorkflowVersionNumber = versionNumber;
     }
 
     public ExecutionStep AddStep(Guid stepId, string stepName, int order)

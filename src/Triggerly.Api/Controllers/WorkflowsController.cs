@@ -41,6 +41,13 @@ public class WorkflowsController : ControllerBase
         return result is null ? NotFound() : Ok(result);
     }
 
+    [HttpGet("{id:guid}/versions")]
+    public async Task<IActionResult> GetVersions(Guid id, CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(new GetWorkflowVersionsQuery(id, TenantId), cancellationToken);
+        return Ok(result);
+    }
+
     [Authorize(Roles = "Admin,Editor")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateWorkflowRequest request, CancellationToken cancellationToken = default)
