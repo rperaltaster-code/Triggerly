@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, CheckCircle, XCircle, Clock, AlertTriangle, MessageSquare, Send, Ban } from 'lucide-react'
 import { useExecution, useApproveExecution, useRejectExecution, useCancelExecution, useAddComment } from '../hooks/useExecutions'
+import { useWorkflow } from '../hooks/useWorkflows'
 import { RejectModal } from '../components/executions/RejectModal'
 import { Badge } from '../components/ui/Badge'
 import { useRole } from '../hooks/useRole'
@@ -24,6 +25,7 @@ export function ExecutionDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: execution, isLoading } = useExecution(id!)
+  const { data: workflow } = useWorkflow(execution?.workflowId ?? '')
   const approve = useApproveExecution()
   const reject = useRejectExecution()
   const cancel = useCancelExecution()
@@ -232,9 +234,17 @@ export function ExecutionDetail() {
       {Object.keys(execution.inputData).length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
           <h2 className="font-semibold text-gray-800 mb-3">Input Data</h2>
-          <pre className="text-xs bg-gray-50 p-4 rounded-lg overflow-auto">
-            {JSON.stringify(execution.inputData, null, 2)}
-          </pre>
+          <div className="space-y-2">
+            {Object.entries(execution.inputData).map(([key, value]) => {
+              const label = workflow?.formSchema.find((f) => f.id === key)?.label ?? key
+              return (
+                <div key={key} className="flex items-center gap-3 text-sm">
+                  <span className="font-medium text-gray-600 min-w-32">{label}</span>
+                  <span className="text-gray-900">{String(value)}</span>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
