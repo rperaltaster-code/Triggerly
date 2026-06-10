@@ -24,6 +24,6 @@ public class UpdateWorkflowCommandHandler : IRequestHandler<UpdateWorkflowComman
             workflow.Id, request.Name, request.Description, workflow.Status,
             workflow.TenantId, workflow.Version,
             workflow.Steps.Select(s => new WorkflowStepDto(s.Id, s.Name, s.Type, s.Order, s.Config, s.NextStepId)).ToList(),
-            workflow.CreatedAt, DateTime.UtcNow);
+            workflow.CreatedAt, DateTime.UtcNow, workflow.FormSchema);
     }
 }

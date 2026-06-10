@@ -15,6 +15,17 @@ export interface TeamMember {
   role: UserRole
 }
 
+export type FormFieldType = 'Text' | 'Number' | 'Date' | 'Dropdown' | 'Checkbox'
+
+export interface FormField {
+  id: string
+  label: string
+  type: FormFieldType
+  required: boolean
+  placeholder?: string
+  options?: string[]
+}
+
 export type WorkflowStatus = 'Draft' | 'Active' | 'Inactive' | 'Archived'
 export type ExecutionStatus =
   | 'Pending' | 'Running' | 'WaitingApproval' | 'Approved'
@@ -41,6 +52,7 @@ export interface Workflow {
   steps: WorkflowStep[]
   createdAt: string
   updatedAt: string
+  formSchema: FormField[]
 }
 
 export interface WorkflowSummary {
@@ -51,6 +63,7 @@ export interface WorkflowSummary {
   stepCount: number
   executionCount: number
   updatedAt: string
+  hasForm: boolean
 }
 
 export interface AutomationRule {

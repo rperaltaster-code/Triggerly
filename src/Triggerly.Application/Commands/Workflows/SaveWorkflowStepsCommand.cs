@@ -70,6 +70,6 @@ public class SaveWorkflowStepsCommandHandler : IRequestHandler<SaveWorkflowSteps
             workflow.TenantId, workflow.Version,
             newSteps.OrderBy(s => s.Order).Select(s => new WorkflowStepDto(
                 s.Id, s.Name, s.Type, s.Order, s.Config, s.NextStepId)).ToList(),
-            workflow.CreatedAt, workflow.UpdatedAt);
+            workflow.CreatedAt, workflow.UpdatedAt, workflow.FormSchema);
     }
 }

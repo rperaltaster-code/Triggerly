@@ -60,5 +60,6 @@ public class CreateWorkflowCommandHandler : IRequestHandler<CreateWorkflowComman
             workflow.Steps.Select(s => new WorkflowStepDto(
                 s.Id, s.Name, s.Type, s.Order, s.Config, s.NextStepId)).ToList(),
             workflow.CreatedAt,
-            workflow.UpdatedAt);
+            workflow.UpdatedAt,
+            workflow.FormSchema);
 }

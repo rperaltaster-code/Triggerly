@@ -11,7 +11,8 @@ public record WorkflowDto(
     int Version,
     List<WorkflowStepDto> Steps,
     DateTime CreatedAt,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    List<FormField> FormSchema
 );
 
 public record WorkflowStepDto(
@@ -30,5 +31,6 @@ public record WorkflowSummaryDto(
     int Version,
     int StepCount,
     int ExecutionCount,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    bool HasForm
 );

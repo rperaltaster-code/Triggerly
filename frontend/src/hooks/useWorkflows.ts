@@ -64,3 +64,12 @@ export function useTriggerWorkflow() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['executions'] }),
   })
 }
+
+export function useSaveWorkflowForm() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, fields }: { id: string; fields: import('../types').FormField[] }) =>
+      workflowsApi.saveForm(id, fields),
+    onSuccess: (_data, { id }) => qc.invalidateQueries({ queryKey: workflowKeys.detail(id) }),
+  })
+}

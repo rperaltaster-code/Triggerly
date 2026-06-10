@@ -1,10 +1,46 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Play, Power, Trash2, Search, PenSquare } from 'lucide-react'
-import { useWorkflows, useActivateWorkflow, useDeleteWorkflow, useTriggerWorkflow } from '../hooks/useWorkflows'
+import { useWorkflows, useActivateWorkflow, useDeleteWorkflow, useTriggerWorkflow, useWorkflow } from '../hooks/useWorkflows'
+// useTriggerWorkflow is used inside TriggerButton; useWorkflow fetches full schema on demand
 import { Badge } from '../components/ui/Badge'
 import { useRole } from '../hooks/useRole'
+import { TriggerFormModal } from '../components/workflow/TriggerFormModal'
 import { formatDistanceToNow } from 'date-fns'
+import type { WorkflowSummary } from '../types'
+
+function TriggerButton({ wf }: { wf: WorkflowSummary }) {
+  const [showForm, setShowForm] = useState(false)
+  const trigger = useTriggerWorkflow()
+  const { data: full } = useWorkflow(showForm ? wf.id : '')
+
+  const handleClick = () => {
+    if (wf.hasForm) {
+      setShowForm(true)
+    } else {
+      trigger.mutate({ id: wf.id })
+    }
+  }
+
+  return (
+    <>
+      <button
+        onClick={handleClick}
+        className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
+        title="Trigger"
+      >
+        <Play size={15} />
+      </button>
+      {showForm && full && (
+        <TriggerFormModal
+          workflow={wf}
+          formSchema={full.formSchema}
+          onClose={() => setShowForm(false)}
+        />
+      )}
+    </>
+  )
+}
 
 export function Workflows() {
   const [search, setSearch] = useState('')
@@ -13,7 +49,7 @@ export function Workflows() {
   const { data, isLoading } = useWorkflows({ search: search || undefined })
   const activate = useActivateWorkflow()
   const deleteWf = useDeleteWorkflow()
-  const trigger = useTriggerWorkflow()
+  // trigger is handled per-row by TriggerButton
 
   return (
     <div className="space-y-6">
@@ -84,15 +120,7 @@ export function Workflows() {
                           <PenSquare size={15} />
                         </button>
                       )}
-                      {canEdit && wf.status === 'Active' && (
-                        <button
-                          onClick={() => trigger.mutate({ id: wf.id })}
-                          className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
-                          title="Trigger"
-                        >
-                          <Play size={15} />
-                        </button>
-                      )}
+                      {canEdit && wf.status === 'Active' && <TriggerButton wf={wf} />}
                       {canEdit && wf.status === 'Draft' && (
                         <button
                           onClick={() => activate.mutate(wf.id)}
