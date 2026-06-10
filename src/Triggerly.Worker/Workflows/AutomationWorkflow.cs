@@ -208,7 +208,8 @@ public class AutomationWorkflow : IAutomationWorkflow
 
         if (string.IsNullOrEmpty(field)) return false;
 
-        var actual = context.TryGetValue(field, out var av) ? GetStringValue(av) : null;
+        // If field is a context key, look up its value; otherwise treat the resolved field value directly
+        var actual = context.TryGetValue(field, out var av) ? GetStringValue(av) : field;
 
         return op switch
         {
