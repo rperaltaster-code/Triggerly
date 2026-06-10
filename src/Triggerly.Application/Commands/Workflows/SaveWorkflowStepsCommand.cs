@@ -63,10 +63,36 @@ public class SaveWorkflowStepsCommandHandler : IRequestHandler<SaveWorkflowSteps
             newSteps.Add(step);
         }
 
-        // Wire up sequential next-step links by order
-        var ordered = newSteps.OrderBy(s => s.Order).ToList();
-        for (int i = 0; i < ordered.Count - 1; i++)
-            ordered[i].SetNextStep(ordered[i + 1].Id);
+        // Wire up next-step links from explicit canvas edges (no sequential auto-wiring)
+        var orderToId = newSteps.ToDictionary(s => s.Order, s => s.Id);
+        foreach (var step in newSteps)
+        {
+            var config = new Dictionary<string, object>(step.Config);
+
+            if (step.Type == StepType.Condition)
+            {
+                if (config.TryGetValue("trueBranchOrder", out var trueOrder))
+                {
+                    if (orderToId.TryGetValue(ToInt(trueOrder), out var trueId))
+                        config["trueBranchNextStepId"] = trueId.ToString();
+                    config.Remove("trueBranchOrder");
+                }
+                if (config.TryGetValue("falseBranchOrder", out var falseOrder))
+                {
+                    if (orderToId.TryGetValue(ToInt(falseOrder), out var falseId))
+                        config["falseBranchNextStepId"] = falseId.ToString();
+                    config.Remove("falseBranchOrder");
+                }
+            }
+            else if (config.TryGetValue("nextOrder", out var nextOrder))
+            {
+                if (orderToId.TryGetValue(ToInt(nextOrder), out var nextId))
+                    step.SetNextStep(nextId);
+                config.Remove("nextOrder");
+            }
+
+            step.UpdateConfig(config);
+        }
 
         await _repository.AddStepsAsync(newSteps, cancellationToken);
 
@@ -79,6 +105,8 @@ public class SaveWorkflowStepsCommandHandler : IRequestHandler<SaveWorkflowSteps
         await _versionRepository.AddAsync(version, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        static int ToInt(object v) => v is JsonElement je ? je.GetInt32() : Convert.ToInt32(v);
 
         return new WorkflowDto(
             workflow.Id, workflow.Name, workflow.Description, workflow.Status,

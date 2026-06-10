@@ -63,24 +63,44 @@ function BuilderCanvas() {
         } satisfies StepNodeData,
       }))
 
-    const initialEdges: Edge[] = workflow.steps
-      .filter((s) => s.nextStepId)
-      .map((s) => ({
-        id: `e-${s.id}-${s.nextStepId}`,
-        source: s.id,
-        target: s.nextStepId!,
-        type: 'smoothstep',
-        style: { stroke: '#94a3b8', strokeWidth: 2 },
-      }))
+    const initialEdges: Edge[] = workflow.steps.flatMap((s) => {
+      if (s.type === 'Condition') {
+        const result: Edge[] = []
+        if (s.config.trueBranchNextStepId) result.push({
+          id: `e-${s.id}-true`, source: s.id, target: s.config.trueBranchNextStepId as string,
+          sourceHandle: 'true', type: 'smoothstep',
+          style: { stroke: '#22c55e', strokeWidth: 2 }, label: 'True',
+        })
+        if (s.config.falseBranchNextStepId) result.push({
+          id: `e-${s.id}-false`, source: s.id, target: s.config.falseBranchNextStepId as string,
+          sourceHandle: 'false', type: 'smoothstep',
+          style: { stroke: '#ef4444', strokeWidth: 2 }, label: 'False',
+        })
+        return result
+      }
+      if (s.nextStepId) return [{
+        id: `e-${s.id}-${s.nextStepId}`, source: s.id, target: s.nextStepId,
+        type: 'smoothstep', style: { stroke: '#94a3b8', strokeWidth: 2 },
+      }]
+      return []
+    })
 
     setNodes(initialNodes)
     setEdges(initialEdges)
   }
 
   const onConnect = useCallback(
-    (connection: Connection) =>
-      setEdges((eds) =>
-        addEdge({ ...connection, type: 'smoothstep', style: { stroke: '#94a3b8', strokeWidth: 2 } }, eds)),
+    (connection: Connection) => {
+      const isTrueBranch = connection.sourceHandle === 'true'
+      const isFalseBranch = connection.sourceHandle === 'false'
+      const edgeStyle = isTrueBranch
+        ? { stroke: '#22c55e', strokeWidth: 2 }
+        : isFalseBranch
+        ? { stroke: '#ef4444', strokeWidth: 2 }
+        : { stroke: '#94a3b8', strokeWidth: 2 }
+      const label = isTrueBranch ? 'True' : isFalseBranch ? 'False' : undefined
+      setEdges((eds) => addEdge({ ...connection, type: 'smoothstep', style: edgeStyle, label }, eds))
+    },
     [setEdges],
   )
 
@@ -151,13 +171,27 @@ function BuilderCanvas() {
         await saveForm.mutateAsync({ id, fields: formFields })
       } else {
         const sortedNodes = [...nodes].sort((a, b) => a.position.y - b.position.y)
+        const nodeIdToOrder = Object.fromEntries(sortedNodes.map((n, i) => [n.id, i + 1]))
         const steps = sortedNodes.map((node, i) => {
           const data = node.data as StepNodeData
+          const config = { ...(data.config ?? {}) }
+          if (data.type === 'Condition') {
+            const trueEdge = edges.find((e) => e.source === node.id && e.sourceHandle === 'true')
+            const falseEdge = edges.find((e) => e.source === node.id && e.sourceHandle === 'false')
+            if (trueEdge) config.trueBranchOrder = nodeIdToOrder[trueEdge.target]
+            else delete config.trueBranchOrder
+            if (falseEdge) config.falseBranchOrder = nodeIdToOrder[falseEdge.target]
+            else delete config.falseBranchOrder
+          } else {
+            const nextEdge = edges.find((e) => e.source === node.id)
+            if (nextEdge) config.nextOrder = nodeIdToOrder[nextEdge.target]
+            else delete config.nextOrder
+          }
           return {
             name: data.name,
             type: data.type,
             order: i + 1,
-            config: data.config ?? {},
+            config,
             approverEmail: data.approverEmail ?? null,
           }
         })
