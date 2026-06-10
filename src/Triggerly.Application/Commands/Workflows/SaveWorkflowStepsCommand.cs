@@ -74,13 +74,13 @@ public class SaveWorkflowStepsCommandHandler : IRequestHandler<SaveWorkflowSteps
             var config = new Dictionary<string, object>(step.Config);
             if (config.TryGetValue("trueBranchOrder", out var trueOrder))
             {
-                if (orderToId.TryGetValue(Convert.ToInt32(trueOrder), out var trueId))
+                if (orderToId.TryGetValue(ToInt(trueOrder), out var trueId))
                     config["trueBranchNextStepId"] = trueId.ToString();
                 config.Remove("trueBranchOrder");
             }
             if (config.TryGetValue("falseBranchOrder", out var falseOrder))
             {
-                if (orderToId.TryGetValue(Convert.ToInt32(falseOrder), out var falseId))
+                if (orderToId.TryGetValue(ToInt(falseOrder), out var falseId))
                     config["falseBranchNextStepId"] = falseId.ToString();
                 config.Remove("falseBranchOrder");
             }
@@ -98,6 +98,8 @@ public class SaveWorkflowStepsCommandHandler : IRequestHandler<SaveWorkflowSteps
         await _versionRepository.AddAsync(version, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        static int ToInt(object v) => v is JsonElement je ? je.GetInt32() : Convert.ToInt32(v);
 
         return new WorkflowDto(
             workflow.Id, workflow.Name, workflow.Description, workflow.Status,
