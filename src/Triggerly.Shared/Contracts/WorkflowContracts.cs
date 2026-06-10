@@ -20,6 +20,7 @@ public record AutomationWorkflowInput(
     Guid WorkflowDefinitionId,
     Guid ExecutionId,
     string TenantId,
+    string WorkflowName,
     Dictionary<string, object> InputData,
     List<WorkflowStepInput> Steps
 );

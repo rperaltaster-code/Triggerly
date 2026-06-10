@@ -21,12 +21,13 @@ public class TemporalService : ITemporalService
         Guid workflowDefinitionId,
         Guid executionId,
         string tenantId,
+        string workflowName,
         Dictionary<string, object>? inputData,
         List<WorkflowStepInput> steps,
         CancellationToken cancellationToken = default)
     {
         var workflowId = $"triggerly-{executionId:N}";
-        var input = new AutomationWorkflowInput(workflowDefinitionId, executionId, tenantId, inputData ?? [], steps);
+        var input = new AutomationWorkflowInput(workflowDefinitionId, executionId, tenantId, workflowName, inputData ?? [], steps);
 
         var handle = await _client.StartWorkflowAsync(
             (IAutomationWorkflow wf) => wf.RunAsync(input),

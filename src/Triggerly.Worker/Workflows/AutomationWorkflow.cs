@@ -59,7 +59,7 @@ public class AutomationWorkflow : IAutomationWorkflow
                             await Workflow.ExecuteActivityAsync(
                                 (NotificationActivities act) => act.SendApprovalRequestNotificationAsync(
                                     step.ApproverEmail, step.Name,
-                                    input.ExecutionId.ToString(), input.WorkflowDefinitionId.ToString()),
+                                    input.ExecutionId.ToString(), input.WorkflowName),
                                 activityOptions);
                         }
 

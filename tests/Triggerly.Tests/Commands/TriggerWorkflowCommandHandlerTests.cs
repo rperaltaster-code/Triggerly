@@ -52,7 +52,7 @@ public class TriggerWorkflowCommandHandlerTests
         _unitOfWork.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(1);
         _temporalService
             .Setup(t => t.StartWorkflowAsync(
-                workflow.Id, It.IsAny<Guid>(), "tenant-1", null,
+                workflow.Id, It.IsAny<Guid>(), "tenant-1", It.IsAny<string>(), null,
                 It.IsAny<List<WorkflowStepInput>>(), default))
             .ReturnsAsync(runId);
         _executionRepo.Setup(r => r.StartAsync(It.IsAny<Guid>(), runId, default)).Returns(Task.CompletedTask);

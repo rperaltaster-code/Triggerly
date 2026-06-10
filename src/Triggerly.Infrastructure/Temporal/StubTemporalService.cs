@@ -23,6 +23,7 @@ public class StubTemporalService : ITemporalService
         Guid workflowDefinitionId,
         Guid executionId,
         string tenantId,
+        string workflowName,
         Dictionary<string, object>? inputData,
         List<WorkflowStepInput> steps,
         CancellationToken cancellationToken = default)
@@ -35,19 +36,38 @@ public class StubTemporalService : ITemporalService
             await Task.Delay(500); // let the triggering SaveChanges finish first
             await using var scope = _scopeFactory.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
 
             var exists = await db.Executions.AnyAsync(e => e.Id == executionId);
             if (!exists) return;
 
             // Only auto-complete if the workflow has no approval step; otherwise
             // leave it in WaitingApproval so the user can approve/reject via the UI.
-            var hasApprovalStep = await db.WorkflowSteps
-                .AnyAsync(s => s.WorkflowId == workflowDefinitionId && s.Type == StepType.Approval);
+            var approvalStep = await db.WorkflowSteps
+                .FirstOrDefaultAsync(s => s.WorkflowId == workflowDefinitionId && s.Type == StepType.Approval);
 
-            if (hasApprovalStep)
+            if (approvalStep != null)
+            {
                 await db.Executions
                     .Where(e => e.Id == executionId)
                     .ExecuteUpdateAsync(s => s.SetProperty(e => e.Status, ExecutionStatus.WaitingApproval));
+
+                if (!string.IsNullOrEmpty(approvalStep.ApproverEmail))
+                {
+                    await emailService.SendAsync(
+                        approvalStep.ApproverEmail,
+                        $"Approval Required: {workflowName} — {approvalStep.Name}",
+                        $"""
+                        <p>Your approval is required for a workflow step.</p>
+                        <ul>
+                          <li><strong>Workflow:</strong> {workflowName}</li>
+                          <li><strong>Step:</strong> {approvalStep.Name}</li>
+                          <li><strong>Execution ID:</strong> <code>{executionId}</code></li>
+                        </ul>
+                        <p>Please review and approve or reject this step in <a href="http://localhost:5173/approvals">Triggerly</a>.</p>
+                        """);
+                }
+            }
             else
                 await db.Executions
                     .Where(e => e.Id == executionId)
