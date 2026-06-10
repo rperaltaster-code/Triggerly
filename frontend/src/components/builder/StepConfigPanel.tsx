@@ -1,15 +1,26 @@
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Tag } from 'lucide-react'
 import type { Node } from '@xyflow/react'
 import type { StepNodeData } from './StepNode'
+import type { FormField } from '../../types'
 
 interface StepConfigPanelProps {
   node: Node | null
   onClose: () => void
   onUpdate: (nodeId: string, data: Partial<StepNodeData>) => void
+  formFields?: FormField[]
 }
 
-export function StepConfigPanel({ node, onClose, onUpdate }: StepConfigPanelProps) {
+const TOKEN_MIME = 'application/x-field-token'
+
+function resolvePreview(value: string, fields: FormField[]): string {
+  return value.replace(/\{\{input\.([^}]+)\}\}/g, (_, fieldId) => {
+    const f = fields.find((ff) => ff.id === fieldId)
+    return f ? `[${f.label}]` : '[unknown]'
+  })
+}
+
+export function StepConfigPanel({ node, onClose, onUpdate, formFields = [] }: StepConfigPanelProps) {
   const nodeData = node?.data as StepNodeData | undefined
   const [name, setName] = useState('')
   const [config, setConfig] = useState<Record<string, unknown>>({})
@@ -26,15 +37,45 @@ export function StepConfigPanel({ node, onClose, onUpdate }: StepConfigPanelProp
   if (!node || !nodeData) return null
 
   const handleSave = () => {
-    onUpdate(node.id, {
-      name,
-      config,
-      approverEmail: approverEmail || undefined,
-    })
+    onUpdate(node.id, { name, config, approverEmail: approverEmail || undefined })
   }
 
   const setConfigField = (key: string, value: unknown) =>
     setConfig((prev) => ({ ...prev, [key]: value }))
+
+  const onChipDragStart = (e: React.DragEvent, fieldId: string) => {
+    e.dataTransfer.setData(TOKEN_MIME, `{{input.${fieldId}}}`)
+    e.dataTransfer.effectAllowed = 'copy'
+  }
+
+  const makeDropHandlers = (key: string, currentVal: string) => ({
+    onDragOver: (e: React.DragEvent) => {
+      if (e.dataTransfer.types.includes(TOKEN_MIME)) e.preventDefault()
+    },
+    onDrop: (e: React.DragEvent) => {
+      const token = e.dataTransfer.getData(TOKEN_MIME)
+      if (!token) return
+      e.preventDefault()
+      const el = e.currentTarget as HTMLInputElement | HTMLTextAreaElement
+      const start = el.selectionStart ?? currentVal.length
+      const end = el.selectionEnd ?? currentVal.length
+      setConfigField(key, currentVal.slice(0, start) + token + currentVal.slice(end))
+    },
+  })
+
+  const hasTokens = (val: unknown) =>
+    typeof val === 'string' && val.includes('{{input.')
+
+  const tokenPreview = (val: unknown) => {
+    if (!hasTokens(val) || !formFields.length) return null
+    return (
+      <p className="text-xs text-blue-500 mt-0.5 font-mono">
+        {resolvePreview(val as string, formFields)}
+      </p>
+    )
+  }
+
+  const strVal = (key: string, fallback = '') => String(config[key] ?? fallback)
 
   return (
     <div className="w-72 bg-white border-l border-gray-200 flex flex-col h-full shadow-lg">
@@ -46,6 +87,30 @@ export function StepConfigPanel({ node, onClose, onUpdate }: StepConfigPanelProp
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Form field tokens */}
+        {formFields.length > 0 && (
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Tag size={12} className="text-blue-500" />
+              <span className="text-xs font-semibold text-blue-600">Form Fields</span>
+              <span className="text-xs text-blue-400">— drag into fields below</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {formFields.map((f) => (
+                <span
+                  key={f.id}
+                  draggable
+                  onDragStart={(e) => onChipDragStart(e, f.id)}
+                  className="inline-flex items-center px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-xs rounded-full cursor-grab active:cursor-grabbing select-none hover:bg-blue-100 transition-colors"
+                  title={`{{input.${f.id}}}`}
+                >
+                  {f.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Step Name</label>
           <input
@@ -60,7 +125,6 @@ export function StepConfigPanel({ node, onClose, onUpdate }: StepConfigPanelProp
           <span className="text-sm text-gray-700">{nodeData.type}</span>
         </div>
 
-        {/* Type-specific fields */}
         {nodeData.type === 'Approval' && (
           <>
             <div>
@@ -70,14 +134,28 @@ export function StepConfigPanel({ node, onClose, onUpdate }: StepConfigPanelProp
                 value={approverEmail}
                 onChange={(e) => setApproverEmail(e.target.value)}
                 placeholder="approver@example.com"
+                {...makeDropHandlers('__approverEmail', approverEmail)}
+                onDrop={(e) => {
+                  const token = e.dataTransfer.getData(TOKEN_MIME)
+                  if (!token) return
+                  e.preventDefault()
+                  const el = e.currentTarget
+                  const start = el.selectionStart ?? approverEmail.length
+                  const end = el.selectionEnd ?? approverEmail.length
+                  setApproverEmail(approverEmail.slice(0, start) + token + approverEmail.slice(end))
+                }}
+                onDragOver={(e) => { if (e.dataTransfer.types.includes(TOKEN_MIME)) e.preventDefault() }}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              {hasTokens(approverEmail) && (
+                <p className="text-xs text-blue-500 mt-0.5 font-mono">{resolvePreview(approverEmail, formFields)}</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">SLA (hours)</label>
               <input
                 type="number"
-                value={String(config.slaHours ?? 72)}
+                value={strVal('slaHours', '72')}
                 onChange={(e) => setConfigField('slaHours', Number(e.target.value))}
                 min={1}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -91,7 +169,7 @@ export function StepConfigPanel({ node, onClose, onUpdate }: StepConfigPanelProp
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Channel</label>
               <select
-                value={String(config.channel ?? 'email')}
+                value={strVal('channel', 'email')}
                 onChange={(e) => setConfigField('channel', e.target.value)}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -102,21 +180,25 @@ export function StepConfigPanel({ node, onClose, onUpdate }: StepConfigPanelProp
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Recipient</label>
               <input
-                value={String(config.recipient ?? '')}
+                value={strVal('recipient')}
                 onChange={(e) => setConfigField('recipient', e.target.value)}
                 placeholder="user@example.com"
+                {...makeDropHandlers('recipient', strVal('recipient'))}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              {tokenPreview(config.recipient)}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Message</label>
               <textarea
-                value={String(config.message ?? '')}
+                value={strVal('message')}
                 onChange={(e) => setConfigField('message', e.target.value)}
                 rows={3}
                 placeholder="Notification message..."
+                {...makeDropHandlers('message', strVal('message'))}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
+              {tokenPreview(config.message)}
             </div>
           </>
         )}
@@ -126,7 +208,7 @@ export function StepConfigPanel({ node, onClose, onUpdate }: StepConfigPanelProp
             <label className="block text-xs font-medium text-gray-600 mb-1">Delay (seconds)</label>
             <input
               type="number"
-              value={String(config.delaySeconds ?? 60)}
+              value={strVal('delaySeconds', '60')}
               onChange={(e) => setConfigField('delaySeconds', Number(e.target.value))}
               min={1}
               className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -139,16 +221,18 @@ export function StepConfigPanel({ node, onClose, onUpdate }: StepConfigPanelProp
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">URL</label>
               <input
-                value={String(config.url ?? '')}
+                value={strVal('url')}
                 onChange={(e) => setConfigField('url', e.target.value)}
                 placeholder="https://example.com/webhook"
+                {...makeDropHandlers('url', strVal('url'))}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              {tokenPreview(config.url)}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Method</label>
               <select
-                value={String(config.method ?? 'POST')}
+                value={strVal('method', 'POST')}
                 onChange={(e) => setConfigField('method', e.target.value)}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -165,16 +249,18 @@ export function StepConfigPanel({ node, onClose, onUpdate }: StepConfigPanelProp
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Field</label>
               <input
-                value={String(config.field ?? '')}
+                value={strVal('field')}
                 onChange={(e) => setConfigField('field', e.target.value)}
                 placeholder="e.g. amount"
+                {...makeDropHandlers('field', strVal('field'))}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              {tokenPreview(config.field)}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Operator</label>
               <select
-                value={String(config.operator ?? 'equals')}
+                value={strVal('operator', 'equals')}
                 onChange={(e) => setConfigField('operator', e.target.value)}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -186,11 +272,13 @@ export function StepConfigPanel({ node, onClose, onUpdate }: StepConfigPanelProp
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Value</label>
               <input
-                value={String(config.value ?? '')}
+                value={strVal('value')}
                 onChange={(e) => setConfigField('value', e.target.value)}
                 placeholder="e.g. 1000"
+                {...makeDropHandlers('value', strVal('value'))}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              {tokenPreview(config.value)}
             </div>
           </>
         )}
@@ -199,12 +287,14 @@ export function StepConfigPanel({ node, onClose, onUpdate }: StepConfigPanelProp
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
             <textarea
-              value={String(config.description ?? '')}
+              value={strVal('description')}
               onChange={(e) => setConfigField('description', e.target.value)}
               rows={3}
               placeholder="Describe what this step does..."
+              {...makeDropHandlers('description', strVal('description'))}
               className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
+            {tokenPreview(config.description)}
           </div>
         )}
 

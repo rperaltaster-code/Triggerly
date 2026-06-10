@@ -14,6 +14,7 @@ public class TriggerWorkflowCommandHandlerTests
 {
     private readonly Mock<IWorkflowRepository> _workflowRepo = new();
     private readonly Mock<IWorkflowExecutionRepository> _executionRepo = new();
+    private readonly Mock<IWorkflowVersionRepository> _versionRepo = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ITemporalService> _temporalService = new();
     private readonly Mock<IAuditService> _auditMock = new();
@@ -27,9 +28,12 @@ public class TriggerWorkflowCommandHandlerTests
             It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
+        _versionRepo.Setup(r => r.GetLatestByWorkflowAsync(It.IsAny<Guid>(), default))
+            .ReturnsAsync((Triggerly.Domain.Entities.WorkflowVersion?)null);
+
         _handler = new TriggerWorkflowCommandHandler(
             _workflowRepo.Object, _executionRepo.Object,
-            _unitOfWork.Object, _temporalService.Object, _auditMock.Object);
+            _versionRepo.Object, _unitOfWork.Object, _temporalService.Object, _auditMock.Object);
     }
 
     private WorkflowDefinition CreateActiveWorkflow(string tenantId = "tenant-1")

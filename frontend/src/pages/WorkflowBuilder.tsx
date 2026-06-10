@@ -311,6 +311,7 @@ function BuilderCanvas() {
             node={selectedNode}
             onClose={() => setSelectedNode(null)}
             onUpdate={handleUpdateNode}
+            formFields={formFields}
           />
         )}
       </div>

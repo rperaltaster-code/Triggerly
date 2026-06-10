@@ -1,5 +1,6 @@
 using Temporalio.Workflows;
 using Triggerly.Shared.Contracts;
+using Triggerly.Shared.Utils;
 using Triggerly.Worker.Activities;
 
 namespace Triggerly.Worker.Workflows;
@@ -35,6 +36,7 @@ public class AutomationWorkflow : IAutomationWorkflow
             foreach (var step in input.Steps.OrderBy(s => s.Order))
             {
                 _currentStatus = $"Executing: {step.Name}";
+                var resolvedConfig = TemplateEngine.Resolve(step.Config, input.InputData);
 
                 await Workflow.ExecuteActivityAsync(
                     (WorkflowActivities act) => act.UpdateExecutionStatusAsync(
@@ -46,7 +48,7 @@ public class AutomationWorkflow : IAutomationWorkflow
                     case "Approval":
                         _currentStatus = $"Awaiting approval: {step.Name}";
 
-                        var slaHours = step.Config.TryGetValue("slaHours", out var h)
+                        var slaHours = resolvedConfig.TryGetValue("slaHours", out var h)
                             ? Convert.ToInt32(h) : 72;
 
                         await Workflow.ExecuteActivityAsync(
@@ -109,25 +111,25 @@ public class AutomationWorkflow : IAutomationWorkflow
                     case "Notification":
                         await Workflow.ExecuteActivityAsync(
                             (NotificationActivities act) => act.SendNotificationAsync(
-                                input.TenantId, step.Config, context),
+                                input.TenantId, resolvedConfig, context),
                             activityOptions);
                         break;
 
                     case "Delay":
-                        var delaySeconds = step.Config.TryGetValue("delaySeconds", out var d)
+                        var delaySeconds = resolvedConfig.TryGetValue("delaySeconds", out var d)
                             ? Convert.ToInt32(d) : 60;
                         await Workflow.DelayAsync(TimeSpan.FromSeconds(delaySeconds));
                         break;
 
                     case "DataTransform":
                         context = await Workflow.ExecuteActivityAsync(
-                            (DataActivities act) => act.TransformDataAsync(context, step.Config),
+                            (DataActivities act) => act.TransformDataAsync(context, resolvedConfig),
                             activityOptions);
                         break;
 
                     case "Webhook":
                         var webhookResult = await Workflow.ExecuteActivityAsync(
-                            (DataActivities act) => act.CallWebhookAsync(step.Config, context),
+                            (DataActivities act) => act.CallWebhookAsync(resolvedConfig, context),
                             activityOptions);
                         context["webhookResult"] = webhookResult;
                         break;
@@ -135,7 +137,7 @@ public class AutomationWorkflow : IAutomationWorkflow
                     default:
                         await Workflow.ExecuteActivityAsync(
                             (WorkflowActivities act) => act.ExecuteActionStepAsync(
-                                input.ExecutionId, step.Id, step.Config, context),
+                                input.ExecutionId, step.Id, resolvedConfig, context),
                             activityOptions);
                         break;
                 }
