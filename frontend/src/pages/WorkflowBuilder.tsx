@@ -179,7 +179,13 @@ function BuilderCanvas() {
             const trueEdge = edges.find((e) => e.source === node.id && e.sourceHandle === 'true')
             const falseEdge = edges.find((e) => e.source === node.id && e.sourceHandle === 'false')
             if (trueEdge) config.trueBranchOrder = nodeIdToOrder[trueEdge.target]
+            else delete config.trueBranchOrder
             if (falseEdge) config.falseBranchOrder = nodeIdToOrder[falseEdge.target]
+            else delete config.falseBranchOrder
+          } else {
+            const nextEdge = edges.find((e) => e.source === node.id)
+            if (nextEdge) config.nextOrder = nodeIdToOrder[nextEdge.target]
+            else delete config.nextOrder
           }
           return {
             name: data.name,

@@ -63,27 +63,34 @@ public class SaveWorkflowStepsCommandHandler : IRequestHandler<SaveWorkflowSteps
             newSteps.Add(step);
         }
 
-        // Wire up next-step links: sequential for all steps, then resolve branch IDs for Condition steps
-        var ordered = newSteps.OrderBy(s => s.Order).ToList();
-        for (int i = 0; i < ordered.Count - 1; i++)
-            ordered[i].SetNextStep(ordered[i + 1].Id);
-
+        // Wire up next-step links from explicit canvas edges (no sequential auto-wiring)
         var orderToId = newSteps.ToDictionary(s => s.Order, s => s.Id);
-        foreach (var step in newSteps.Where(s => s.Type == StepType.Condition))
+        foreach (var step in newSteps)
         {
             var config = new Dictionary<string, object>(step.Config);
-            if (config.TryGetValue("trueBranchOrder", out var trueOrder))
+
+            if (step.Type == StepType.Condition)
             {
-                if (orderToId.TryGetValue(ToInt(trueOrder), out var trueId))
-                    config["trueBranchNextStepId"] = trueId.ToString();
-                config.Remove("trueBranchOrder");
+                if (config.TryGetValue("trueBranchOrder", out var trueOrder))
+                {
+                    if (orderToId.TryGetValue(ToInt(trueOrder), out var trueId))
+                        config["trueBranchNextStepId"] = trueId.ToString();
+                    config.Remove("trueBranchOrder");
+                }
+                if (config.TryGetValue("falseBranchOrder", out var falseOrder))
+                {
+                    if (orderToId.TryGetValue(ToInt(falseOrder), out var falseId))
+                        config["falseBranchNextStepId"] = falseId.ToString();
+                    config.Remove("falseBranchOrder");
+                }
             }
-            if (config.TryGetValue("falseBranchOrder", out var falseOrder))
+            else if (config.TryGetValue("nextOrder", out var nextOrder))
             {
-                if (orderToId.TryGetValue(ToInt(falseOrder), out var falseId))
-                    config["falseBranchNextStepId"] = falseId.ToString();
-                config.Remove("falseBranchOrder");
+                if (orderToId.TryGetValue(ToInt(nextOrder), out var nextId))
+                    step.SetNextStep(nextId);
+                config.Remove("nextOrder");
             }
+
             step.UpdateConfig(config);
         }
 
