@@ -120,12 +120,13 @@ export function ExecutionDetail() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {[
           { label: 'Started', value: format(new Date(execution.startedAt), 'MMM d, yyyy HH:mm:ss') },
           { label: 'Completed', value: execution.completedAt ? format(new Date(execution.completedAt), 'MMM d, yyyy HH:mm:ss') : '—' },
           { label: 'Triggered By', value: execution.triggeredBy ?? 'System' },
           { label: 'Current Step', value: execution.currentStepName ?? '—' },
+          { label: 'Workflow Version', value: execution.workflowVersionNumber > 0 ? `v${execution.workflowVersionNumber}` : '—' },
         ].map(({ label, value }) => (
           <div key={label} className="bg-white border border-gray-200 rounded-lg p-4">
             <p className="text-xs text-gray-500">{label}</p>

@@ -25,6 +25,8 @@ public class WorkflowExecutionConfiguration : IEntityTypeConfiguration<WorkflowE
         builder.Property(e => e.ErrorMessage).HasMaxLength(4000);
         builder.Property(e => e.CurrentStepName).HasMaxLength(200);
         builder.Property(e => e.Status).HasConversion<int>();
+        builder.Property(e => e.WorkflowVersionId);
+        builder.Property(e => e.WorkflowVersionNumber);
 
         builder.Property(e => e.InputData)
             .HasConversion(

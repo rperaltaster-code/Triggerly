@@ -65,6 +65,14 @@ export function useTriggerWorkflow() {
   })
 }
 
+export function useWorkflowVersions(id: string) {
+  return useQuery({
+    queryKey: [...workflowKeys.detail(id), 'versions'] as const,
+    queryFn: () => workflowsApi.getVersions(id),
+    enabled: !!id,
+  })
+}
+
 export function useSaveWorkflowForm() {
   const qc = useQueryClient()
   return useMutation({

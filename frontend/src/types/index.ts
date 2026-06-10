@@ -122,6 +122,14 @@ export interface WorkflowExecution {
   slaBreachedAt: string | null
   steps: ExecutionStep[]
   comments: ExecutionComment[]
+  workflowVersionNumber: number
+}
+
+export interface WorkflowVersion {
+  id: string
+  versionNumber: number
+  createdAt: string
+  createdBy: string
 }
 
 export interface PagedResult<T> {

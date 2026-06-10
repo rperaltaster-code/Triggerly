@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { Play, Power, ArrowLeft, GitBranch, PenSquare } from 'lucide-react'
-import { useWorkflow, useActivateWorkflow, useTriggerWorkflow } from '../hooks/useWorkflows'
+import { Play, Power, ArrowLeft, GitBranch, PenSquare, History } from 'lucide-react'
+import { useWorkflow, useActivateWorkflow, useTriggerWorkflow, useWorkflowVersions } from '../hooks/useWorkflows'
 import { Badge } from '../components/ui/Badge'
 import { useRole } from '../hooks/useRole'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 
 const stepTypeColors: Record<string, string> = {
   Action: 'bg-blue-100 text-blue-700',
@@ -19,6 +19,7 @@ export function WorkflowDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: workflow, isLoading } = useWorkflow(id!)
+  const { data: versions } = useWorkflowVersions(id!)
   const activate = useActivateWorkflow()
   const trigger = useTriggerWorkflow()
   const { canEdit } = useRole()
@@ -113,6 +114,31 @@ export function WorkflowDetail() {
           </div>
         )}
       </div>
+
+      {/* Version history */}
+      {versions && versions.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <History size={18} className="text-gray-500" />
+            <h2 className="font-semibold text-gray-800">Version History ({versions.length})</h2>
+          </div>
+          <div className="space-y-2">
+            {versions.map((v, idx) => (
+              <div key={v.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${idx === 0 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                  v{v.versionNumber}
+                </span>
+                <span className="text-sm text-gray-500 flex-1">
+                  Saved {formatDistanceToNow(new Date(v.createdAt), { addSuffix: true })}
+                </span>
+                {idx === 0 && (
+                  <span className="text-xs text-green-600 font-medium">Latest</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
