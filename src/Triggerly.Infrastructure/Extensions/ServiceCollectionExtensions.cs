@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Temporalio.Client;
 using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Interfaces;
-using Triggerly.Infrastructure.Repositories;
 using Triggerly.Infrastructure.Auth; // PasswordHasher only — TokenService lives in Api (needs JwtBearer)
 using Triggerly.Infrastructure.Email;
 using Triggerly.Infrastructure.Persistence;
