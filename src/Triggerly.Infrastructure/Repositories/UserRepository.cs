@@ -23,4 +23,7 @@ public class UserRepository : IUserRepository
 
     public Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken = default) =>
         _context.Users.AnyAsync(u => u.Email == email.ToLowerInvariant(), cancellationToken);
+
+    public async Task<IReadOnlyList<User>> GetByTenantAsync(string tenantId, CancellationToken cancellationToken = default) =>
+        await _context.Users.Where(u => u.TenantId == tenantId).ToListAsync(cancellationToken);
 }

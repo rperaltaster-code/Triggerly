@@ -50,10 +50,10 @@ function StepNodeComponent({ id, data, selected }: NodeProps) {
         {nodeData.approverEmail && (
           <p className="mt-0.5 text-xs text-gray-400 truncate">{nodeData.approverEmail}</p>
         )}
-        {nodeData.type === 'Delay' && nodeData.config.delaySeconds && (
+        {nodeData.type === 'Delay' && !!nodeData.config.delaySeconds && (
           <p className="mt-0.5 text-xs text-gray-400">{String(nodeData.config.delaySeconds)}s delay</p>
         )}
-        {nodeData.type === 'Webhook' && nodeData.config.url && (
+        {nodeData.type === 'Webhook' && !!nodeData.config.url && (
           <p className="mt-0.5 text-xs text-gray-400 truncate">{String(nodeData.config.url)}</p>
         )}
       </div>

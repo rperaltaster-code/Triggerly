@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle, XCircle, Clock, AlertTriangle, MessageSquare, S
 import { useExecution, useApproveExecution, useRejectExecution, useCancelExecution, useAddComment } from '../hooks/useExecutions'
 import { RejectModal } from '../components/executions/RejectModal'
 import { Badge } from '../components/ui/Badge'
+import { useRole } from '../hooks/useRole'
 import { format, formatDistanceToNow } from 'date-fns'
 import type { ExecutionStatus } from '../types'
 
@@ -27,6 +28,7 @@ export function ExecutionDetail() {
   const reject = useRejectExecution()
   const cancel = useCancelExecution()
   const addComment = useAddComment(id!)
+  const { canApprove, canEdit } = useRole()
   const [commentText, setCommentText] = useState('')
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
@@ -66,7 +68,7 @@ export function ExecutionDetail() {
           <p className="text-gray-400 text-sm font-mono mt-0.5">{execution.temporalWorkflowId}</p>
         </div>
         <div className="flex gap-2">
-          {execution.status === 'WaitingApproval' && (
+          {canApprove && execution.status === 'WaitingApproval' && (
             <>
               <button
                 onClick={() => approve.mutate(execution.id)}
@@ -83,7 +85,7 @@ export function ExecutionDetail() {
               </button>
             </>
           )}
-          {(execution.status === 'Running' || execution.status === 'WaitingApproval' || execution.status === 'Pending') && (
+          {canEdit && (execution.status === 'Running' || execution.status === 'WaitingApproval' || execution.status === 'Pending') && (
             <button
               onClick={() => setShowCancelConfirm(true)}
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm"

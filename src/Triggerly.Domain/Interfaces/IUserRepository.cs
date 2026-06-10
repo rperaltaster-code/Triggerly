@@ -8,4 +8,5 @@ public interface IUserRepository
     Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task AddAsync(User user, CancellationToken cancellationToken = default);
     Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<User>> GetByTenantAsync(string tenantId, CancellationToken cancellationToken = default);
 }

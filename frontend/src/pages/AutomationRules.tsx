@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Plus, Trash2, Zap, Copy, Check } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { automationRulesApi } from '../api/automationRules'
-import { Badge } from '../components/ui/Badge'
+import { useRole } from '../hooks/useRole'
 import { formatDistanceToNow } from 'date-fns'
 import { NewRuleModal } from '../components/automationRules/NewRuleModal'
 
@@ -27,6 +27,7 @@ function WebhookUrl({ token }: { token: string }) {
 export function AutomationRules() {
   const qc = useQueryClient()
   const [showNewModal, setShowNewModal] = useState(false)
+  const { isAdmin, canEdit } = useRole()
   const { data, isLoading } = useQuery({
     queryKey: ['automation-rules'],
     queryFn: () => automationRulesApi.list(),
@@ -53,12 +54,14 @@ export function AutomationRules() {
           <h1 className="text-2xl font-bold text-gray-900">Automation Rules</h1>
           <p className="text-gray-500 mt-1">Configure triggers that automatically start workflows</p>
         </div>
-        <button
-          onClick={() => setShowNewModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-        >
-          <Plus size={16} /> New Rule
-        </button>
+        {canEdit && (
+          <button
+            onClick={() => setShowNewModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+          >
+            <Plus size={16} /> New Rule
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -94,22 +97,26 @@ export function AutomationRules() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => rule.isEnabled ? disable.mutate(rule.id) : enable.mutate(rule.id)}
-                    className={`px-3 py-1.5 text-xs rounded-lg border font-medium ${
-                      rule.isEnabled
-                        ? 'border-yellow-300 text-yellow-700 hover:bg-yellow-50'
-                        : 'border-green-300 text-green-700 hover:bg-green-50'
-                    }`}
-                  >
-                    {rule.isEnabled ? 'Disable' : 'Enable'}
-                  </button>
-                  <button
-                    onClick={() => { if (confirm('Delete this rule?')) del.mutate(rule.id) }}
-                    className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => rule.isEnabled ? disable.mutate(rule.id) : enable.mutate(rule.id)}
+                      className={`px-3 py-1.5 text-xs rounded-lg border font-medium ${
+                        rule.isEnabled
+                          ? 'border-yellow-300 text-yellow-700 hover:bg-yellow-50'
+                          : 'border-green-300 text-green-700 hover:bg-green-50'
+                      }`}
+                    >
+                      {rule.isEnabled ? 'Disable' : 'Enable'}
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button
+                      onClick={() => { if (confirm('Delete this rule?')) del.mutate(rule.id) }}
+                      className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

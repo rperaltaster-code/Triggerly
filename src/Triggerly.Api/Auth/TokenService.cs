@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Triggerly.Shared.Models;
 using Microsoft.IdentityModel.Tokens;
 using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Entities;
@@ -13,7 +14,7 @@ public class TokenService : ITokenService
 
     public TokenService(IConfiguration configuration) => _configuration = configuration;
 
-    public string GenerateToken(User user)
+    public string GenerateToken(User user, string role)
     {
         var key = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]
@@ -28,6 +29,7 @@ public class TokenService : ITokenService
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.Name, user.Name),
             new Claim("tenantId", user.TenantId),
+            new Claim(ClaimTypes.Role, role),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
 

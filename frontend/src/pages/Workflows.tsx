@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Play, Power, Trash2, Search, PenSquare } from 'lucide-react'
 import { useWorkflows, useActivateWorkflow, useDeleteWorkflow, useTriggerWorkflow } from '../hooks/useWorkflows'
 import { Badge } from '../components/ui/Badge'
+import { useRole } from '../hooks/useRole'
 import { formatDistanceToNow } from 'date-fns'
 
 export function Workflows() {
   const [search, setSearch] = useState('')
   const navigate = useNavigate()
+  const { isAdmin, canEdit } = useRole()
   const { data, isLoading } = useWorkflows({ search: search || undefined })
   const activate = useActivateWorkflow()
   const deleteWf = useDeleteWorkflow()
@@ -20,12 +22,14 @@ export function Workflows() {
           <h1 className="text-2xl font-bold text-gray-900">Workflows</h1>
           <p className="text-gray-500 mt-1">Define and manage your automation workflows</p>
         </div>
-        <Link
-          to="/workflows/new"
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-        >
-          <Plus size={16} /> New Workflow
-        </Link>
+        {canEdit && (
+          <Link
+            to="/workflows/new"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+          >
+            <Plus size={16} /> New Workflow
+          </Link>
+        )}
       </div>
 
       <div className="relative">
@@ -71,14 +75,16 @@ export function Workflows() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 justify-end">
-                      <button
-                        onClick={() => navigate(`/workflows/${wf.id}/builder`)}
-                        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg"
-                        title="Open Builder"
-                      >
-                        <PenSquare size={15} />
-                      </button>
-                      {wf.status === 'Active' && (
+                      {canEdit && (
+                        <button
+                          onClick={() => navigate(`/workflows/${wf.id}/builder`)}
+                          className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                          title="Open Builder"
+                        >
+                          <PenSquare size={15} />
+                        </button>
+                      )}
+                      {canEdit && wf.status === 'Active' && (
                         <button
                           onClick={() => trigger.mutate({ id: wf.id })}
                           className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
@@ -87,7 +93,7 @@ export function Workflows() {
                           <Play size={15} />
                         </button>
                       )}
-                      {wf.status === 'Draft' && (
+                      {canEdit && wf.status === 'Draft' && (
                         <button
                           onClick={() => activate.mutate(wf.id)}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -96,13 +102,15 @@ export function Workflows() {
                           <Power size={15} />
                         </button>
                       )}
-                      <button
-                        onClick={() => { if (confirm('Delete this workflow?')) deleteWf.mutate(wf.id) }}
-                        className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"
-                        title="Delete"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => { if (confirm('Delete this workflow?')) deleteWf.mutate(wf.id) }}
+                          className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"
+                          title="Delete"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
