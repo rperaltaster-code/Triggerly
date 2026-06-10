@@ -1,4 +1,4 @@
-import { LayoutDashboard, GitBranch, Activity, Clock, AlertTriangle, CheckCircle } from 'lucide-react'
+import { GitBranch, Activity, Clock, AlertTriangle, CheckCircle } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
