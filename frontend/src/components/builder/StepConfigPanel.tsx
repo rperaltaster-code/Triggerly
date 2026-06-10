@@ -161,6 +161,37 @@ export function StepConfigPanel({ node, onClose, onUpdate, formFields = [] }: St
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Reminders at SLA %
+                <span className="ml-1 text-gray-400 font-normal">(comma-separated, e.g. 50, 80)</span>
+              </label>
+              <input
+                value={Array.isArray(config.reminderAtPercent)
+                  ? (config.reminderAtPercent as number[]).join(', ')
+                  : strVal('reminderAtPercent')}
+                onChange={(e) => {
+                  const parts = e.target.value
+                    .split(',')
+                    .map((s) => parseInt(s.trim(), 10))
+                    .filter((n) => !isNaN(n) && n > 0 && n < 100)
+                  setConfigField('reminderAtPercent', parts.length ? parts : e.target.value)
+                }}
+                placeholder="50, 80"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Escalation Email</label>
+              <input
+                value={strVal('escalationEmail')}
+                onChange={(e) => setConfigField('escalationEmail', e.target.value)}
+                placeholder="manager@example.com"
+                {...makeDropHandlers('escalationEmail', strVal('escalationEmail'))}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {tokenPreview(config.escalationEmail)}
+            </div>
           </>
         )}
 

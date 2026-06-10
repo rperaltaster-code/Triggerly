@@ -68,6 +68,59 @@ public class NotificationActivities
     }
 
     [Activity]
+    public async Task SendApprovalReminderAsync(
+        string approverEmail, string stepName, string executionId, string workflowName,
+        int percentElapsed, int slaHours)
+    {
+        var approvalsUrl = $"{_baseUrl}/approvals";
+        var remainingHours = (int)Math.Ceiling(slaHours * (100 - percentElapsed) / 100.0);
+
+        await _emailService.SendAsync(
+            approverEmail,
+            $"Reminder: Approval Required — {workflowName} / {stepName}",
+            $"""
+            <p>A reminder that your approval is still required.</p>
+            <ul>
+              <li><strong>Workflow:</strong> {workflowName}</li>
+              <li><strong>Step:</strong> {stepName}</li>
+              <li><strong>SLA progress:</strong> {percentElapsed}% elapsed (~{remainingHours}h remaining)</li>
+            </ul>
+            <p><a href="{approvalsUrl}">Review in Triggerly</a></p>
+            """,
+            ActivityExecutionContext.Current.CancellationToken);
+
+        if (!string.IsNullOrEmpty(_tenantSlackWebhookUrl))
+            await PostSlackMessageAsync(_tenantSlackWebhookUrl,
+                $":clock1: *Approval reminder* — *{workflowName}* / {stepName} — {percentElapsed}% of SLA elapsed, ~{remainingHours}h remaining\n<{approvalsUrl}|Review in Triggerly>");
+    }
+
+    [Activity]
+    public async Task SendEscalationNotificationAsync(
+        string escalationEmail, string? primaryEmail, string stepName, string executionId, string workflowName, int slaHours)
+    {
+        var approvalsUrl = $"{_baseUrl}/approvals";
+
+        await _emailService.SendAsync(
+            escalationEmail,
+            $"Escalation: Approval overdue — {workflowName} / {stepName}",
+            $"""
+            <p>An approval step has been escalated to you because the primary approver has not responded.</p>
+            <ul>
+              <li><strong>Workflow:</strong> {workflowName}</li>
+              <li><strong>Step:</strong> {stepName}</li>
+              <li><strong>Primary approver:</strong> {primaryEmail ?? "N/A"}</li>
+              <li><strong>SLA:</strong> {slaHours}h</li>
+            </ul>
+            <p><a href="{approvalsUrl}">Review in Triggerly</a></p>
+            """,
+            ActivityExecutionContext.Current.CancellationToken);
+
+        if (!string.IsNullOrEmpty(_tenantSlackWebhookUrl))
+            await PostSlackMessageAsync(_tenantSlackWebhookUrl,
+                $":rotating_light: *Escalation* — *{workflowName}* / {stepName} escalated to {escalationEmail}. Primary approver ({primaryEmail ?? "N/A"}) has not responded.\n<{approvalsUrl}|Review in Triggerly>");
+    }
+
+    [Activity]
     public async Task SendApprovalRequestNotificationAsync(
         string approverEmail, string stepName, string executionId, string workflowName)
     {
