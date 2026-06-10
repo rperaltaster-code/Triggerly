@@ -34,6 +34,14 @@ public class NotificationActivities
             "Sending notification via {Channel} to {Recipient}: {Message}",
             channel, recipient, message);
 
+        if (recipient != null && recipient.Contains("{{input."))
+        {
+            ActivityExecutionContext.Current.Logger.LogWarning(
+                "Notification step has unresolved tokens in recipient — workflow has no form data. " +
+                "Define form fields in the Trigger Form tab and trigger with the form.");
+            return;
+        }
+
         if (channel == "slack")
         {
             var webhookUrl = config.TryGetValue("webhookUrl", out var wh) && !string.IsNullOrWhiteSpace(wh?.ToString())
