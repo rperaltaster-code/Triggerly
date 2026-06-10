@@ -27,7 +27,7 @@ function WebhookUrl({ token }: { token: string }) {
 export function AutomationRules() {
   const qc = useQueryClient()
   const [showNewModal, setShowNewModal] = useState(false)
-  const { isAdmin, canEdit } = useRole()
+  const { isManager } = useRole()
   const { data, isLoading } = useQuery({
     queryKey: ['automation-rules'],
     queryFn: () => automationRulesApi.list(),
@@ -54,7 +54,7 @@ export function AutomationRules() {
           <h1 className="text-2xl font-bold text-gray-900">Automation Rules</h1>
           <p className="text-gray-500 mt-1">Configure triggers that automatically start workflows</p>
         </div>
-        {canEdit && (
+        {isManager && (
           <button
             onClick={() => setShowNewModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
@@ -97,7 +97,7 @@ export function AutomationRules() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {canEdit && (
+                  {isManager && (
                     <button
                       onClick={() => rule.isEnabled ? disable.mutate(rule.id) : enable.mutate(rule.id)}
                       className={`px-3 py-1.5 text-xs rounded-lg border font-medium ${
@@ -109,7 +109,7 @@ export function AutomationRules() {
                       {rule.isEnabled ? 'Disable' : 'Enable'}
                     </button>
                   )}
-                  {isAdmin && (
+                  {isManager && (
                     <button
                       onClick={() => { if (confirm('Delete this rule?')) del.mutate(rule.id) }}
                       className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"

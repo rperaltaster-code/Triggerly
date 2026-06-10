@@ -14,6 +14,7 @@ import { AutomationRules } from './pages/AutomationRules'
 import { Approvals } from './pages/Approvals'
 import { AuditLogPage } from './pages/AuditLogPage'
 import { Settings } from './pages/Settings'
+import { Team } from './pages/Team'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -40,6 +41,7 @@ function AppRoutes() {
         <Route path="/executions/:id" element={<ExecutionDetail />} />
         <Route path="/automation" element={<AutomationRules />} />
         <Route path="/approvals" element={<Approvals />} />
+        <Route path="/team" element={<Team />} />
         <Route path="/audit" element={<AuditLogPage />} />
         <Route path="/settings" element={<Settings />} />
       </Route>

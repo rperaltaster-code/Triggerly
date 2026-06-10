@@ -22,7 +22,7 @@ export function WorkflowDetail() {
   const { data: versions } = useWorkflowVersions(id!)
   const activate = useActivateWorkflow()
   const trigger = useTriggerWorkflow()
-  const { canEdit } = useRole()
+  const { canEditWorkflows, canTrigger } = useRole()
 
   if (isLoading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>
   if (!workflow) return <div className="text-center py-12 text-gray-500">Workflow not found</div>
@@ -41,7 +41,7 @@ export function WorkflowDetail() {
           {workflow.description && <p className="text-gray-500 mt-0.5">{workflow.description}</p>}
         </div>
         <div className="flex gap-2">
-          {canEdit && (
+          {canEditWorkflows && (
             <button
               onClick={() => navigate(`/workflows/${workflow.id}/builder`)}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
@@ -49,7 +49,7 @@ export function WorkflowDetail() {
               <PenSquare size={15} /> Open Builder
             </button>
           )}
-          {canEdit && workflow.status === 'Draft' && (
+          {canEditWorkflows && workflow.status === 'Draft' && (
             <button
               onClick={() => activate.mutate(workflow.id)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
@@ -57,7 +57,7 @@ export function WorkflowDetail() {
               <Power size={15} /> Activate
             </button>
           )}
-          {canEdit && workflow.status === 'Active' && (
+          {canTrigger && workflow.status === 'Active' && (
             <button
               onClick={() => trigger.mutate({ id: workflow.id })}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"

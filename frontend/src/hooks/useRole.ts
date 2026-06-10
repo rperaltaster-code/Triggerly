@@ -3,13 +3,35 @@ import type { UserRole } from '../types'
 
 export function useRole() {
   const { user } = useAuth()
-  const role: UserRole = user?.role ?? 'Viewer'
+  const role: UserRole = (user?.role as UserRole) ?? 'Preparer'
+
+  const isManager = role === 'Manager'
+  const isReviewer = role === 'Reviewer'
+  const isPreparer = role === 'Preparer'
 
   return {
     role,
-    isAdmin: role === 'Admin',
-    canEdit: role === 'Admin' || role === 'Editor',
-    canApprove: role === 'Admin' || role === 'Approver',
-    isViewer: role === 'Viewer',
+    isManager,
+    isReviewer,
+    isPreparer,
+    // Execution permissions
+    canTrigger: isManager || isReviewer,
+    canCancel: isManager || isReviewer,
+    canApprove: isManager || isReviewer,
+    // Workflow permissions
+    canViewWorkflows: isManager || isReviewer,
+    canEditWorkflows: isManager,
+    // Client permissions
+    canManageClients: isManager,
+    // Team permissions
+    canViewTeam: isManager || isReviewer,
+    canManageTeam: isManager,
+    // Settings
+    canAccessSettings: isManager,
+    // Audit log
+    canViewAuditLog: isManager || isReviewer,
+    // Legacy aliases kept for compatibility during rollout
+    isAdmin: isManager,
+    canEdit: isManager,
   }
 }

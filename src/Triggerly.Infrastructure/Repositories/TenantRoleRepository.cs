@@ -28,7 +28,7 @@ public class TenantRoleRepository : ITenantRoleRepository
             .ToListAsync(ct);
 
         foreach (var user in usersWithoutRole)
-            await _context.TenantRoles.AddAsync(TenantRole.Create(user.Id, user.TenantId, UserRole.Admin), ct);
+            await _context.TenantRoles.AddAsync(TenantRole.Create(user.Id, user.TenantId, UserRole.Manager), ct);
 
         if (usersWithoutRole.Count > 0)
             await _context.SaveChangesAsync(ct);

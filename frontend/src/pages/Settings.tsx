@@ -3,25 +3,23 @@ import { useRole } from '../hooks/useRole'
 import { useAuth } from '../contexts/AuthContext'
 import type { UserRole } from '../types'
 
-const ROLES: UserRole[] = ['Viewer', 'Approver', 'Editor', 'Admin']
+const ROLES: UserRole[] = ['Preparer', 'Reviewer', 'Manager']
 
 const roleDescriptions: Record<UserRole, string> = {
-  Viewer: 'Read-only access',
-  Approver: 'Can approve / reject executions',
-  Editor: 'Can create, edit and trigger workflows',
-  Admin: 'Full access including team management',
+  Preparer: 'Can view and complete assigned tasks only',
+  Reviewer: 'Can approve / reject steps and view all team activity',
+  Manager: 'Full access — workflows, clients, team, and settings',
 }
 
 const roleBadge: Record<UserRole, string> = {
-  Viewer: 'bg-gray-100 text-gray-600',
-  Approver: 'bg-purple-100 text-purple-700',
-  Editor: 'bg-blue-100 text-blue-700',
-  Admin: 'bg-green-100 text-green-700',
+  Preparer: 'bg-gray-100 text-gray-600',
+  Reviewer: 'bg-teal-100 text-teal-700',
+  Manager: 'bg-blue-100 text-blue-700',
 }
 
 export function Settings() {
   const { user } = useAuth()
-  const { isAdmin } = useRole()
+  const { isManager } = useRole()
   const { data: members, isLoading } = useTeam()
   const updateRole = useUpdateRole()
 
@@ -36,7 +34,7 @@ export function Settings() {
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="font-semibold text-gray-800">Team Members</h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            {isAdmin ? 'Assign roles to control what each member can do.' : 'Your team members and their roles.'}
+            {isManager ? 'Assign roles to control what each member can do.' : 'Your team members and their roles.'}
           </p>
         </div>
 
@@ -61,7 +59,7 @@ export function Settings() {
                   <p className="text-xs text-gray-500 truncate">{member.email}</p>
                 </div>
 
-                {isAdmin && member.userId !== user?.id ? (
+                {isManager && member.userId !== user?.id ? (
                   <select
                     value={member.role}
                     onChange={(e) =>
@@ -74,7 +72,7 @@ export function Settings() {
                     ))}
                   </select>
                 ) : (
-                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${roleBadge[member.role]}`}>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${roleBadge[member.role as UserRole] ?? roleBadge.Preparer}`}>
                     {member.role}
                   </span>
                 )}
@@ -88,11 +86,11 @@ export function Settings() {
         <h2 className="font-semibold text-gray-800 mb-4">Role Permissions</h2>
         <div className="space-y-3">
           {ROLES.map((r) => (
-            <div key={r} className="flex items-center gap-3">
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium w-20 text-center ${roleBadge[r]}`}>
+            <div key={r} className="flex items-start gap-3">
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium w-24 text-center flex-shrink-0 ${roleBadge[r]}`}>
                 {r}
               </span>
-              <span className="text-sm text-gray-600">{roleDescriptions[r]}</span>
+              <span className="text-sm text-gray-600 pt-0.5">{roleDescriptions[r]}</span>
             </div>
           ))}
         </div>
