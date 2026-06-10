@@ -13,7 +13,8 @@ public record WorkflowStepInput(
     string Type,
     int Order,
     Dictionary<string, object> Config,
-    string? ApproverEmail
+    string? ApproverEmail,
+    Guid? NextStepId = null
 );
 
 public record AutomationWorkflowInput(

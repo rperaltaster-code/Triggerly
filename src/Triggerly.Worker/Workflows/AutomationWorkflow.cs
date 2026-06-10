@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Temporalio.Workflows;
 using Triggerly.Shared.Contracts;
 using Triggerly.Shared.Utils;
@@ -33,34 +34,43 @@ public class AutomationWorkflow : IAutomationWorkflow
             _currentStatus = "Running";
             var context = new Dictionary<string, object>(input.InputData);
 
-            foreach (var step in input.Steps.OrderBy(s => s.Order))
+            var stepsById = input.Steps.ToDictionary(s => s.Id);
+            var currentStep = input.Steps.OrderBy(s => s.Order).FirstOrDefault();
+            var visited = new HashSet<Guid>();
+
+            while (currentStep is not null)
             {
-                _currentStatus = $"Executing: {step.Name}";
-                var resolvedConfig = TemplateEngine.Resolve(step.Config, input.InputData);
+                if (!visited.Add(currentStep.Id))
+                    break; // cycle guard
+
+                _currentStatus = $"Executing: {currentStep.Name}";
+                var resolvedConfig = TemplateEngine.Resolve(currentStep.Config, input.InputData);
 
                 await Workflow.ExecuteActivityAsync(
                     (WorkflowActivities act) => act.UpdateExecutionStatusAsync(
-                        input.ExecutionId, step.Id, step.Order, step.Name, "Running"),
+                        input.ExecutionId, currentStep.Id, currentStep.Order, currentStep.Name, "Running"),
                     activityOptions);
 
-                switch (step.Type)
+                Guid? nextStepId = currentStep.NextStepId;
+
+                switch (currentStep.Type)
                 {
                     case "Approval":
-                        _currentStatus = $"Awaiting approval: {step.Name}";
+                        _currentStatus = $"Awaiting approval: {currentStep.Name}";
 
                         var slaHours = resolvedConfig.TryGetValue("slaHours", out var h)
                             ? Convert.ToInt32(h) : 72;
 
                         await Workflow.ExecuteActivityAsync(
                             (WorkflowActivities act) => act.RequestApprovalAsync(
-                                input.ExecutionId, step.Id, step.Name, step.ApproverEmail),
+                                input.ExecutionId, currentStep.Id, currentStep.Name, currentStep.ApproverEmail),
                             activityOptions);
 
-                        if (!string.IsNullOrEmpty(step.ApproverEmail))
+                        if (!string.IsNullOrEmpty(currentStep.ApproverEmail))
                         {
                             await Workflow.ExecuteActivityAsync(
                                 (NotificationActivities act) => act.SendApprovalRequestNotificationAsync(
-                                    step.ApproverEmail, step.Name,
+                                    currentStep.ApproverEmail, currentStep.Name,
                                     input.ExecutionId.ToString(), input.WorkflowName),
                                 activityOptions);
                         }
@@ -78,18 +88,18 @@ public class AutomationWorkflow : IAutomationWorkflow
                                 (WorkflowActivities act) => act.MarkSlaBreachedAsync(input.ExecutionId),
                                 activityOptions);
 
-                            if (!string.IsNullOrEmpty(step.ApproverEmail))
+                            if (!string.IsNullOrEmpty(currentStep.ApproverEmail))
                             {
                                 await Workflow.ExecuteActivityAsync(
                                     (NotificationActivities act) => act.SendSlaBreachNotificationAsync(
-                                        step.ApproverEmail, step.Name,
+                                        currentStep.ApproverEmail, currentStep.Name,
                                         input.ExecutionId.ToString(), slaHours),
                                     activityOptions);
                             }
 
                             await Workflow.ExecuteActivityAsync(
                                 (WorkflowActivities act) => act.CompleteStepAsync(
-                                    input.ExecutionId, step.Id, false, timeoutReason),
+                                    input.ExecutionId, currentStep.Id, false, timeoutReason),
                                 activityOptions);
                             return new AutomationWorkflowResult(false, context, timeoutReason);
                         }
@@ -100,12 +110,22 @@ public class AutomationWorkflow : IAutomationWorkflow
                             _currentStatus = "Rejected";
                             await Workflow.ExecuteActivityAsync(
                                 (WorkflowActivities act) => act.CompleteStepAsync(
-                                    input.ExecutionId, step.Id, false, rejectReason),
+                                    input.ExecutionId, currentStep.Id, false, rejectReason),
                                 activityOptions);
                             return new AutomationWorkflowResult(false, context, rejectReason);
                         }
 
                         _approvalSignal = null;
+                        break;
+
+                    case "Condition":
+                        var branchTaken = EvaluateCondition(resolvedConfig, context);
+                        context[$"__branch_{currentStep.Id}"] = branchTaken ? "true" : "false";
+                        var branchKey = branchTaken ? "trueBranchNextStepId" : "falseBranchNextStepId";
+                        nextStepId = resolvedConfig.TryGetValue(branchKey, out var bid) &&
+                                     Guid.TryParse(bid?.ToString(), out var branchGuid)
+                            ? branchGuid
+                            : null;
                         break;
 
                     case "Notification":
@@ -137,20 +157,23 @@ public class AutomationWorkflow : IAutomationWorkflow
                     default:
                         await Workflow.ExecuteActivityAsync(
                             (WorkflowActivities act) => act.ExecuteActionStepAsync(
-                                input.ExecutionId, step.Id, resolvedConfig, context),
+                                input.ExecutionId, currentStep.Id, resolvedConfig, context),
                             activityOptions);
                         break;
                 }
 
                 await Workflow.ExecuteActivityAsync(
-                    (WorkflowActivities act) => act.CompleteStepAsync(input.ExecutionId, step.Id, true, null),
+                    (WorkflowActivities act) => act.CompleteStepAsync(input.ExecutionId, currentStep.Id, true, null),
                     activityOptions);
+
+                currentStep = nextStepId.HasValue && stepsById.TryGetValue(nextStepId.Value, out var next)
+                    ? next : null;
             }
 
             _currentStatus = "Completed";
             await Workflow.ExecuteActivityAsync(
                 (WorkflowActivities act) => act.CompleteExecutionAsync(input.ExecutionId, true, context, null),
-                activityOptions);
+                new ActivityOptions { StartToCloseTimeout = TimeSpan.FromMinutes(2) });
 
             return new AutomationWorkflowResult(true, context, null);
         }
@@ -176,4 +199,35 @@ public class AutomationWorkflow : IAutomationWorkflow
 
     [WorkflowQuery]
     public string GetCurrentStatus() => _currentStatus;
+
+    private static bool EvaluateCondition(Dictionary<string, object> config, Dictionary<string, object> context)
+    {
+        var field = GetString(config, "field");
+        var op = GetString(config, "operator") ?? "equals";
+        var expected = GetString(config, "value");
+
+        if (string.IsNullOrEmpty(field)) return false;
+
+        var actual = context.TryGetValue(field, out var av) ? GetStringValue(av) : null;
+
+        return op switch
+        {
+            "equals" => actual == expected,
+            "not-equals" => actual != expected,
+            "contains" => actual?.Contains(expected ?? string.Empty, StringComparison.OrdinalIgnoreCase) == true,
+            "greater-than" => double.TryParse(actual, out var a1) && double.TryParse(expected, out var e1) && a1 > e1,
+            "less-than" => double.TryParse(actual, out var a2) && double.TryParse(expected, out var e2) && a2 < e2,
+            _ => false
+        };
+    }
+
+    private static string? GetString(Dictionary<string, object> dict, string key) =>
+        dict.TryGetValue(key, out var v) ? GetStringValue(v) : null;
+
+    private static string? GetStringValue(object? v) => v switch
+    {
+        string s => s,
+        JsonElement je => je.ValueKind == JsonValueKind.String ? je.GetString() : je.ToString(),
+        _ => v?.ToString()
+    };
 }

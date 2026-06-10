@@ -62,7 +62,7 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var steps = workflow.Steps
-            .Select(s => new WorkflowStepInput(s.Id, s.Name, s.Type.ToString(), s.Order, s.Config, s.ApproverEmail))
+            .Select(s => new WorkflowStepInput(s.Id, s.Name, s.Type.ToString(), s.Order, s.Config, s.ApproverEmail, s.NextStepId))
             .ToList();
 
         var runId = await _temporalService.StartWorkflowAsync(

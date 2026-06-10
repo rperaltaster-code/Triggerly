@@ -63,10 +63,29 @@ public class SaveWorkflowStepsCommandHandler : IRequestHandler<SaveWorkflowSteps
             newSteps.Add(step);
         }
 
-        // Wire up sequential next-step links by order
+        // Wire up next-step links: sequential for all steps, then resolve branch IDs for Condition steps
         var ordered = newSteps.OrderBy(s => s.Order).ToList();
         for (int i = 0; i < ordered.Count - 1; i++)
             ordered[i].SetNextStep(ordered[i + 1].Id);
+
+        var orderToId = newSteps.ToDictionary(s => s.Order, s => s.Id);
+        foreach (var step in newSteps.Where(s => s.Type == StepType.Condition))
+        {
+            var config = new Dictionary<string, object>(step.Config);
+            if (config.TryGetValue("trueBranchOrder", out var trueOrder))
+            {
+                if (orderToId.TryGetValue(Convert.ToInt32(trueOrder), out var trueId))
+                    config["trueBranchNextStepId"] = trueId.ToString();
+                config.Remove("trueBranchOrder");
+            }
+            if (config.TryGetValue("falseBranchOrder", out var falseOrder))
+            {
+                if (orderToId.TryGetValue(Convert.ToInt32(falseOrder), out var falseId))
+                    config["falseBranchNextStepId"] = falseId.ToString();
+                config.Remove("falseBranchOrder");
+            }
+            step.UpdateConfig(config);
+        }
 
         await _repository.AddStepsAsync(newSteps, cancellationToken);
 

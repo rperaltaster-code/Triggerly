@@ -58,7 +58,26 @@ function StepNodeComponent({ id, data, selected }: NodeProps) {
         )}
       </div>
 
-      <Handle type="source" position={Position.Bottom} className="!w-3 !h-3 !bg-gray-400 !border-2 !border-white" />
+      {nodeData.type === 'Condition' ? (
+        <>
+          <Handle
+            type="source" id="true" position={Position.Bottom}
+            style={{ left: '30%' }}
+            className="!w-3 !h-3 !bg-green-400 !border-2 !border-white"
+          />
+          <Handle
+            type="source" id="false" position={Position.Bottom}
+            style={{ left: '70%' }}
+            className="!w-3 !h-3 !bg-red-400 !border-2 !border-white"
+          />
+          <div className="absolute -bottom-5 left-0 right-0 flex justify-between px-4 pointer-events-none">
+            <span className="text-[10px] text-green-600 font-semibold">True</span>
+            <span className="text-[10px] text-red-500 font-semibold">False</span>
+          </div>
+        </>
+      ) : (
+        <Handle type="source" position={Position.Bottom} className="!w-3 !h-3 !bg-gray-400 !border-2 !border-white" />
+      )}
     </div>
   )
 }
