@@ -72,7 +72,7 @@ public class AutomationWorkflow : IAutomationWorkflow
                         {
                             await Workflow.ExecuteActivityAsync(
                                 (NotificationActivities act) => act.SendApprovalRequestNotificationAsync(
-                                    currentStep.ApproverEmail, currentStep.Name,
+                                    input.TenantId, currentStep.ApproverEmail, currentStep.Name,
                                     input.ExecutionId.ToString(), input.WorkflowName),
                                 activityOptions);
                         }
@@ -96,7 +96,7 @@ public class AutomationWorkflow : IAutomationWorkflow
                                 if (!string.IsNullOrEmpty(currentStep.ApproverEmail))
                                     await Workflow.ExecuteActivityAsync(
                                         (NotificationActivities act) => act.SendApprovalReminderAsync(
-                                            currentStep.ApproverEmail, currentStep.Name,
+                                            input.TenantId, currentStep.ApproverEmail, currentStep.Name,
                                             input.ExecutionId.ToString(), input.WorkflowName, pct, slaHours),
                                         activityOptions);
 
@@ -104,7 +104,7 @@ public class AutomationWorkflow : IAutomationWorkflow
                                 if (!string.IsNullOrEmpty(escalationEmail) && pct == breakpoints[^2])
                                     await Workflow.ExecuteActivityAsync(
                                         (NotificationActivities act) => act.SendEscalationNotificationAsync(
-                                            escalationEmail, currentStep.ApproverEmail, currentStep.Name,
+                                            input.TenantId, escalationEmail, currentStep.ApproverEmail, currentStep.Name,
                                             input.ExecutionId.ToString(), input.WorkflowName, slaHours),
                                         activityOptions);
                             }
@@ -125,8 +125,8 @@ public class AutomationWorkflow : IAutomationWorkflow
                             {
                                 await Workflow.ExecuteActivityAsync(
                                     (NotificationActivities act) => act.SendSlaBreachNotificationAsync(
-                                        currentStep.ApproverEmail, currentStep.Name,
-                                        input.ExecutionId.ToString(), slaHours),
+                                        input.TenantId, currentStep.ApproverEmail, currentStep.Name,
+                                        input.ExecutionId.ToString(), input.WorkflowName, slaHours),
                                     activityOptions);
                             }
 

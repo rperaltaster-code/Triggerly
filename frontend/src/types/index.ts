@@ -23,6 +23,14 @@ export interface TeamInvite {
   createdAt: string
 }
 
+export interface EmailTemplate {
+  key: string
+  subject: string
+  body: string
+  isCustom: boolean
+  updatedAt: string | null
+}
+
 export type FormFieldType = 'Text' | 'Number' | 'Date' | 'Dropdown' | 'Checkbox'
 
 export interface FormField {

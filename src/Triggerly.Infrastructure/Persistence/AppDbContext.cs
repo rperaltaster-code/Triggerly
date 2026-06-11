@@ -19,6 +19,7 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<ExecutionStep> ExecutionSteps => Set<ExecutionStep>();
     public DbSet<ExecutionComment> ExecutionComments => Set<ExecutionComment>();
     public DbSet<TeamInvite> TeamInvites => Set<TeamInvite>();
+    public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
