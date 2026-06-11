@@ -7,3 +7,5 @@ public record LoginResponseDto(string Token, AuthUserDto User);
 public record RegisterResponseDto(string Token, AuthUserDto User);
 
 public record TeamMemberDto(Guid UserId, string Name, string Email, string Role);
+
+public record TeamInviteDto(Guid Id, string Email, string Role, DateTime ExpiresAt, DateTime CreatedAt);

@@ -29,7 +29,17 @@ public class AuthController : ControllerBase
             new LoginCommand(request.Email, request.Password), cancellationToken);
         return Ok(result);
     }
+
+    [HttpPost("accept-invite")]
+    public async Task<IActionResult> AcceptInvite(
+        [FromBody] AcceptInviteRequest request, CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(
+            new AcceptInviteCommand(request.Token, request.Name, request.Password), cancellationToken);
+        return Ok(result);
+    }
 }
 
 public record RegisterRequest(string Name, string Email, string Password);
 public record LoginRequest(string Email, string Password);
+public record AcceptInviteRequest(string Token, string Name, string Password);

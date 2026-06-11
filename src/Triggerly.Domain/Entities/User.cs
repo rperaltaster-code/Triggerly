@@ -26,4 +26,21 @@ public class User
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    public static User CreateForTenant(string name, string email, string passwordHash, string tenantId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tenantId);
+
+        return new User
+        {
+            Id = Guid.NewGuid(),
+            Name = name.Trim(),
+            Email = email.Trim().ToLowerInvariant(),
+            PasswordHash = passwordHash,
+            TenantId = tenantId,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
 }

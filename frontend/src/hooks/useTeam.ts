@@ -17,3 +17,27 @@ export function useUpdateRole() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['team'] }),
   })
 }
+
+export function usePendingInvites() {
+  return useQuery({
+    queryKey: ['team-invites'],
+    queryFn: teamApi.listInvites,
+  })
+}
+
+export function useInviteMember() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ email, role }: { email: string; role: UserRole }) =>
+      teamApi.invite(email, role),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['team-invites'] }),
+  })
+}
+
+export function useRevokeInvite() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => teamApi.revokeInvite(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['team-invites'] }),
+  })
+}
