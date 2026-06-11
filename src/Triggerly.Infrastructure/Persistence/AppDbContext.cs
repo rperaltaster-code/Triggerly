@@ -18,6 +18,7 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<WorkflowExecution> Executions => Set<WorkflowExecution>();
     public DbSet<ExecutionStep> ExecutionSteps => Set<ExecutionStep>();
     public DbSet<ExecutionComment> ExecutionComments => Set<ExecutionComment>();
+    public DbSet<TeamInvite> TeamInvites => Set<TeamInvite>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

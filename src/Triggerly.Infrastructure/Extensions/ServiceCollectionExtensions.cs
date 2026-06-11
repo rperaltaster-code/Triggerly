@@ -52,6 +52,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWorkflowVersionRepository, WorkflowVersionRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IAuditService, AuditService>();
+        services.AddScoped<ITeamInviteRepository, TeamInviteRepository>();
 
         return services;
     }

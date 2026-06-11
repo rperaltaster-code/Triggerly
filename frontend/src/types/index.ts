@@ -15,6 +15,14 @@ export interface TeamMember {
   role: UserRole
 }
 
+export interface TeamInvite {
+  id: string
+  email: string
+  role: UserRole
+  expiresAt: string
+  createdAt: string
+}
+
 export type FormFieldType = 'Text' | 'Number' | 'Date' | 'Dropdown' | 'Checkbox'
 
 export interface FormField {

@@ -12,4 +12,7 @@ export const authApi = {
 
   register: (name: string, email: string, password: string) =>
     api.post<AuthResponse>('/auth/register', { name, email, password }).then((r) => r.data),
+
+  acceptInvite: (token: string, name: string, password: string) =>
+    api.post<AuthResponse>('/auth/accept-invite', { token, name, password }).then((r) => r.data),
 }

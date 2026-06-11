@@ -15,6 +15,7 @@ import { Approvals } from './pages/Approvals'
 import { AuditLogPage } from './pages/AuditLogPage'
 import { Settings } from './pages/Settings'
 import { Team } from './pages/Team'
+import { AcceptInvite } from './pages/AcceptInvite'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -26,6 +27,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/accept-invite" element={<AcceptInvite />} />
 
       {/* Builder is full-screen — outside AppLayout */}
       <Route path="/workflows/:id/builder" element={
