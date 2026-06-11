@@ -8,16 +8,19 @@ namespace Triggerly.Worker.Activities;
 public class NotificationActivities
 {
     private readonly IEmailService _emailService;
+    private readonly IEmailTemplateService _templateService;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _baseUrl;
     private readonly string _tenantSlackWebhookUrl;
 
     public NotificationActivities(
         IEmailService emailService,
+        IEmailTemplateService templateService,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration)
     {
         _emailService = emailService;
+        _templateService = templateService;
         _httpClientFactory = httpClientFactory;
         _baseUrl = configuration["App:BaseUrl"] ?? "http://localhost:5173";
         _tenantSlackWebhookUrl = configuration["Slack:WebhookUrl"] ?? string.Empty;
@@ -55,10 +58,15 @@ public class NotificationActivities
         }
         else if (channel == "email" && !string.IsNullOrEmpty(recipient))
         {
-            await _emailService.SendAsync(
-                recipient,
-                "Workflow Notification",
-                $"<p>{message}</p>",
+            var tokens = new Dictionary<string, string>
+            {
+                ["message"] = message ?? string.Empty,
+            };
+            var (subject, body) = await _templateService.GetRenderedAsync(
+                tenantId, "notification", tokens,
+                ActivityExecutionContext.Current.CancellationToken);
+
+            await _emailService.SendAsync(recipient, subject, body,
                 ActivityExecutionContext.Current.CancellationToken);
         }
         else
@@ -69,24 +77,27 @@ public class NotificationActivities
 
     [Activity]
     public async Task SendApprovalReminderAsync(
-        string approverEmail, string stepName, string executionId, string workflowName,
-        int percentElapsed, int slaHours)
+        string tenantId, string approverEmail, string stepName, string executionId,
+        string workflowName, int percentElapsed, int slaHours)
     {
         var approvalsUrl = $"{_baseUrl}/approvals";
         var remainingHours = (int)Math.Ceiling(slaHours * (100 - percentElapsed) / 100.0);
 
-        await _emailService.SendAsync(
-            approverEmail,
-            $"Reminder: Approval Required — {workflowName} / {stepName}",
-            $"""
-            <p>A reminder that your approval is still required.</p>
-            <ul>
-              <li><strong>Workflow:</strong> {workflowName}</li>
-              <li><strong>Step:</strong> {stepName}</li>
-              <li><strong>SLA progress:</strong> {percentElapsed}% elapsed (~{remainingHours}h remaining)</li>
-            </ul>
-            <p><a href="{approvalsUrl}">Review in Triggerly</a></p>
-            """,
+        var tokens = new Dictionary<string, string>
+        {
+            ["workflowName"] = workflowName,
+            ["stepName"] = stepName,
+            ["executionId"] = executionId,
+            ["approvalsUrl"] = approvalsUrl,
+            ["percentElapsed"] = percentElapsed.ToString(),
+            ["remainingHours"] = remainingHours.ToString(),
+            ["slaHours"] = slaHours.ToString(),
+        };
+        var (subject, body) = await _templateService.GetRenderedAsync(
+            tenantId, "approval_reminder", tokens,
+            ActivityExecutionContext.Current.CancellationToken);
+
+        await _emailService.SendAsync(approverEmail, subject, body,
             ActivityExecutionContext.Current.CancellationToken);
 
         if (!string.IsNullOrEmpty(_tenantSlackWebhookUrl))
@@ -96,23 +107,25 @@ public class NotificationActivities
 
     [Activity]
     public async Task SendEscalationNotificationAsync(
-        string escalationEmail, string? primaryEmail, string stepName, string executionId, string workflowName, int slaHours)
+        string tenantId, string escalationEmail, string? primaryEmail,
+        string stepName, string executionId, string workflowName, int slaHours)
     {
         var approvalsUrl = $"{_baseUrl}/approvals";
 
-        await _emailService.SendAsync(
-            escalationEmail,
-            $"Escalation: Approval overdue — {workflowName} / {stepName}",
-            $"""
-            <p>An approval step has been escalated to you because the primary approver has not responded.</p>
-            <ul>
-              <li><strong>Workflow:</strong> {workflowName}</li>
-              <li><strong>Step:</strong> {stepName}</li>
-              <li><strong>Primary approver:</strong> {primaryEmail ?? "N/A"}</li>
-              <li><strong>SLA:</strong> {slaHours}h</li>
-            </ul>
-            <p><a href="{approvalsUrl}">Review in Triggerly</a></p>
-            """,
+        var tokens = new Dictionary<string, string>
+        {
+            ["workflowName"] = workflowName,
+            ["stepName"] = stepName,
+            ["executionId"] = executionId,
+            ["approvalsUrl"] = approvalsUrl,
+            ["primaryEmail"] = primaryEmail ?? "N/A",
+            ["slaHours"] = slaHours.ToString(),
+        };
+        var (subject, body) = await _templateService.GetRenderedAsync(
+            tenantId, "escalation", tokens,
+            ActivityExecutionContext.Current.CancellationToken);
+
+        await _emailService.SendAsync(escalationEmail, subject, body,
             ActivityExecutionContext.Current.CancellationToken);
 
         if (!string.IsNullOrEmpty(_tenantSlackWebhookUrl))
@@ -122,22 +135,22 @@ public class NotificationActivities
 
     [Activity]
     public async Task SendApprovalRequestNotificationAsync(
-        string approverEmail, string stepName, string executionId, string workflowName)
+        string tenantId, string approverEmail, string stepName, string executionId, string workflowName)
     {
         var approvalsUrl = $"{_baseUrl}/approvals";
 
-        await _emailService.SendAsync(
-            approverEmail,
-            $"Approval Required: {workflowName} — {stepName}",
-            $"""
-            <p>Your approval is required for a workflow step.</p>
-            <ul>
-              <li><strong>Workflow:</strong> {workflowName}</li>
-              <li><strong>Step:</strong> {stepName}</li>
-              <li><strong>Execution ID:</strong> <code>{executionId}</code></li>
-            </ul>
-            <p><a href="{approvalsUrl}">Review and approve or reject this step in Triggerly</a></p>
-            """,
+        var tokens = new Dictionary<string, string>
+        {
+            ["workflowName"] = workflowName,
+            ["stepName"] = stepName,
+            ["executionId"] = executionId,
+            ["approvalsUrl"] = approvalsUrl,
+        };
+        var (subject, body) = await _templateService.GetRenderedAsync(
+            tenantId, "approval_request", tokens,
+            ActivityExecutionContext.Current.CancellationToken);
+
+        await _emailService.SendAsync(approverEmail, subject, body,
             ActivityExecutionContext.Current.CancellationToken);
 
         if (!string.IsNullOrEmpty(_tenantSlackWebhookUrl))
@@ -150,20 +163,22 @@ public class NotificationActivities
 
     [Activity]
     public async Task SendSlaBreachNotificationAsync(
-        string approverEmail, string stepName, string executionId, int slaHours)
+        string tenantId, string approverEmail, string stepName, string executionId,
+        string workflowName, int slaHours)
     {
-        await _emailService.SendAsync(
-            approverEmail,
-            $"SLA Breach: Approval overdue for '{stepName}'",
-            $"""
-            <p>An approval step has exceeded its SLA of <strong>{slaHours} hours</strong> and has timed out.</p>
-            <ul>
-              <li><strong>Step:</strong> {stepName}</li>
-              <li><strong>Execution ID:</strong> <code>{executionId}</code></li>
-              <li><strong>SLA:</strong> {slaHours} hours</li>
-            </ul>
-            <p>The workflow has been marked as timed out. Please review in Triggerly.</p>
-            """,
+        var tokens = new Dictionary<string, string>
+        {
+            ["workflowName"] = workflowName,
+            ["stepName"] = stepName,
+            ["executionId"] = executionId,
+            ["approvalsUrl"] = $"{_baseUrl}/approvals",
+            ["slaHours"] = slaHours.ToString(),
+        };
+        var (subject, body) = await _templateService.GetRenderedAsync(
+            tenantId, "sla_breach", tokens,
+            ActivityExecutionContext.Current.CancellationToken);
+
+        await _emailService.SendAsync(approverEmail, subject, body,
             ActivityExecutionContext.Current.CancellationToken);
 
         if (!string.IsNullOrEmpty(_tenantSlackWebhookUrl))

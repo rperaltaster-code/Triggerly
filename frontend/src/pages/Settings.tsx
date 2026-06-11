@@ -1,7 +1,11 @@
+import { useState } from 'react'
+import { ChevronDown, ChevronUp, RotateCcw, Save } from 'lucide-react'
 import { useTeam, useUpdateRole } from '../hooks/useTeam'
 import { useRole } from '../hooks/useRole'
 import { useAuth } from '../contexts/AuthContext'
-import type { UserRole } from '../types'
+import { useEmailTemplates, useUpsertEmailTemplate, useResetEmailTemplate } from '../hooks/useEmailTemplates'
+import { formatDistanceToNow } from 'date-fns'
+import type { UserRole, EmailTemplate } from '../types'
 
 const ROLES: UserRole[] = ['Preparer', 'Reviewer', 'Manager']
 
@@ -17,17 +21,162 @@ const roleBadge: Record<UserRole, string> = {
   Manager: 'bg-blue-100 text-blue-700',
 }
 
+const templateMeta: Record<string, { label: string; tokens: string[] }> = {
+  approval_request: {
+    label: 'Approval Request',
+    tokens: ['{{workflowName}}', '{{stepName}}', '{{executionId}}', '{{approvalsUrl}}'],
+  },
+  approval_reminder: {
+    label: 'Approval Reminder',
+    tokens: ['{{workflowName}}', '{{stepName}}', '{{executionId}}', '{{approvalsUrl}}', '{{percentElapsed}}', '{{remainingHours}}', '{{slaHours}}'],
+  },
+  escalation: {
+    label: 'Escalation',
+    tokens: ['{{workflowName}}', '{{stepName}}', '{{executionId}}', '{{approvalsUrl}}', '{{primaryEmail}}', '{{slaHours}}'],
+  },
+  sla_breach: {
+    label: 'SLA Breach',
+    tokens: ['{{workflowName}}', '{{stepName}}', '{{executionId}}', '{{approvalsUrl}}', '{{slaHours}}'],
+  },
+  notification: {
+    label: 'Workflow Notification',
+    tokens: ['{{message}}'],
+  },
+}
+
+function TemplateEditor({ template, onClose }: { template: EmailTemplate; onClose: () => void }) {
+  const [subject, setSubject] = useState(template.subject)
+  const [body, setBody] = useState(template.body)
+  const upsert = useUpsertEmailTemplate()
+  const reset = useResetEmailTemplate()
+  const meta = templateMeta[template.key]
+
+  const handleSave = async () => {
+    await upsert.mutateAsync({ key: template.key, subject, body })
+    onClose()
+  }
+
+  const handleReset = async () => {
+    if (!confirm('Reset to default? Your custom template will be deleted.')) return
+    await reset.mutateAsync(template.key)
+    onClose()
+  }
+
+  return (
+    <div className="border-t border-gray-100 bg-gray-50 p-5 space-y-4">
+      <div className="grid grid-cols-3 gap-4">
+        <div className="col-span-2 space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Subject</label>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Body (HTML)</label>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={10}
+              className="w-full text-sm font-mono border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+            />
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-gray-600 mb-2">Available tokens</p>
+          <div className="space-y-1">
+            {meta?.tokens.map((token) => (
+              <button
+                key={token}
+                type="button"
+                onClick={() => setBody((b) => b + token)}
+                className="block w-full text-left text-xs font-mono px-2 py-1.5 bg-white border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-300 text-gray-700 transition-colors"
+                title="Click to append to body"
+              >
+                {token}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-2">Click a token to append it to the body.</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          onClick={handleSave}
+          disabled={upsert.isPending}
+          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          <Save size={14} /> {upsert.isPending ? 'Saving…' : 'Save'}
+        </button>
+        {template.isCustom && (
+          <button
+            onClick={handleReset}
+            disabled={reset.isPending}
+            className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            <RotateCcw size={13} /> Reset to default
+          </button>
+        )}
+        <button
+          onClick={onClose}
+          className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function TemplateRow({ template }: { template: EmailTemplate }) {
+  const [open, setOpen] = useState(false)
+  const meta = templateMeta[template.key]
+
+  return (
+    <div className="border-b border-gray-100 last:border-0">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors text-left"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-900">{meta?.label ?? template.key}</span>
+            {template.isCustom ? (
+              <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">Custom</span>
+            ) : (
+              <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">Default</span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 truncate mt-0.5">{template.subject}</p>
+          {template.isCustom && template.updatedAt && (
+            <p className="text-xs text-gray-400 mt-0.5">
+              Last edited {formatDistanceToNow(new Date(template.updatedAt), { addSuffix: true })}
+            </p>
+          )}
+        </div>
+        {open ? <ChevronUp size={16} className="text-gray-400 flex-shrink-0" /> : <ChevronDown size={16} className="text-gray-400 flex-shrink-0" />}
+      </button>
+      {open && <TemplateEditor template={template} onClose={() => setOpen(false)} />}
+    </div>
+  )
+}
+
 export function Settings() {
   const { user } = useAuth()
   const { isManager } = useRole()
   const { data: members, isLoading } = useTeam()
   const updateRole = useUpdateRole()
+  const { data: emailTemplates, isLoading: templatesLoading } = useEmailTemplates()
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-500 mt-1">Manage your team and roles</p>
+        <p className="text-gray-500 mt-1">Manage your team and organisation settings</p>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -95,6 +244,28 @@ export function Settings() {
           ))}
         </div>
       </div>
+
+      {isManager && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="font-semibold text-gray-800">Email Templates</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Customise the emails sent for workflow events. Tokens in <code className="text-xs bg-gray-100 px-1 rounded">{'{{brackets}}'}</code> are replaced at send time.
+            </p>
+          </div>
+          {templatesLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600" />
+            </div>
+          ) : (
+            <div>
+              {emailTemplates?.map((t) => (
+                <TemplateRow key={t.key} template={t} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

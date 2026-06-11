@@ -53,6 +53,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<ITeamInviteRepository, TeamInviteRepository>();
+        services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>();
+        services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 
         return services;
     }
