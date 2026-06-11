@@ -48,7 +48,7 @@ public class WorkflowsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Manager")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateWorkflowRequest request, CancellationToken cancellationToken = default)
     {
@@ -57,7 +57,7 @@ public class WorkflowsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Manager")]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateWorkflowCommand command, CancellationToken cancellationToken = default)
     {
@@ -66,7 +66,7 @@ public class WorkflowsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Manager")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken = default)
     {
@@ -74,7 +74,7 @@ public class WorkflowsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Manager")]
     [HttpPost("{id:guid}/activate")]
     public async Task<IActionResult> Activate(Guid id, CancellationToken cancellationToken = default)
     {
@@ -82,7 +82,7 @@ public class WorkflowsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Manager")]
     [HttpPost("{id:guid}/deactivate")]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken cancellationToken = default)
     {
@@ -90,7 +90,7 @@ public class WorkflowsController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Manager,Reviewer")]
     [HttpPost("{id:guid}/trigger")]
     public async Task<IActionResult> Trigger(
         Guid id,
@@ -102,7 +102,7 @@ public class WorkflowsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Manager")]
     [HttpPut("{id:guid}/form")]
     public async Task<IActionResult> SaveForm(
         Guid id,
@@ -114,7 +114,7 @@ public class WorkflowsController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Manager")]
     [HttpPut("{id:guid}/steps")]
     public async Task<IActionResult> SaveSteps(
         Guid id,

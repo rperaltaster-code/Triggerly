@@ -36,7 +36,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, LoginResponseDt
             throw new UnauthorizedAccessException("Invalid email or password.");
 
         var tenantRole = await _roleRepository.GetAsync(user.Id, user.TenantId, cancellationToken);
-        var role = tenantRole?.Role.ToString() ?? UserRole.Admin.ToString();
+        var role = tenantRole?.Role.ToString() ?? UserRole.Manager.ToString();
 
         var token = _tokenService.GenerateToken(user, role);
         return new LoginResponseDto(token, new AuthUserDto(user.Id, user.Name, user.Email, user.TenantId, role));

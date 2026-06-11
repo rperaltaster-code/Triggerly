@@ -45,7 +45,7 @@ function TriggerButton({ wf }: { wf: WorkflowSummary }) {
 export function Workflows() {
   const [search, setSearch] = useState('')
   const navigate = useNavigate()
-  const { isAdmin, canEdit } = useRole()
+  const { isManager, canTrigger, canEditWorkflows } = useRole()
   const { data, isLoading } = useWorkflows({ search: search || undefined })
   const activate = useActivateWorkflow()
   const deleteWf = useDeleteWorkflow()
@@ -58,7 +58,7 @@ export function Workflows() {
           <h1 className="text-2xl font-bold text-gray-900">Workflows</h1>
           <p className="text-gray-500 mt-1">Define and manage your automation workflows</p>
         </div>
-        {canEdit && (
+        {canEditWorkflows && (
           <Link
             to="/workflows/new"
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
@@ -111,7 +111,7 @@ export function Workflows() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 justify-end">
-                      {canEdit && (
+                      {canEditWorkflows && (
                         <button
                           onClick={() => navigate(`/workflows/${wf.id}/builder`)}
                           className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg"
@@ -120,8 +120,8 @@ export function Workflows() {
                           <PenSquare size={15} />
                         </button>
                       )}
-                      {canEdit && wf.status === 'Active' && <TriggerButton wf={wf} />}
-                      {canEdit && wf.status === 'Draft' && (
+                      {canTrigger && wf.status === 'Active' && <TriggerButton wf={wf} />}
+                      {canEditWorkflows && wf.status === 'Draft' && (
                         <button
                           onClick={() => activate.mutate(wf.id)}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -130,7 +130,7 @@ export function Workflows() {
                           <Power size={15} />
                         </button>
                       )}
-                      {isAdmin && (
+                      {isManager && (
                         <button
                           onClick={() => { if (confirm('Delete this workflow?')) deleteWf.mutate(wf.id) }}
                           className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"

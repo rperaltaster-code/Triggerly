@@ -41,7 +41,7 @@ public class AutomationRulesController : ControllerBase
         return result is null ? NotFound() : Ok(result);
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Manager")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateAutomationRuleRequest request, CancellationToken cancellationToken = default)
     {
@@ -50,7 +50,7 @@ public class AutomationRulesController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Manager")]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(
         Guid id, [FromBody] UpdateAutomationRuleCommand command, CancellationToken cancellationToken = default)
@@ -60,7 +60,7 @@ public class AutomationRulesController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Manager")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken = default)
     {
@@ -68,7 +68,7 @@ public class AutomationRulesController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Manager")]
     [HttpPost("{id:guid}/enable")]
     public async Task<IActionResult> Enable(Guid id, CancellationToken cancellationToken = default)
     {
@@ -76,7 +76,7 @@ public class AutomationRulesController : ControllerBase
         return NoContent();
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Manager")]
     [HttpPost("{id:guid}/disable")]
     public async Task<IActionResult> Disable(Guid id, CancellationToken cancellationToken = default)
     {

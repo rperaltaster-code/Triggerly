@@ -42,11 +42,11 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterR
         await _userRepository.AddAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var tenantRole = TenantRole.Create(user.Id, user.TenantId, UserRole.Admin);
+        var tenantRole = TenantRole.Create(user.Id, user.TenantId, UserRole.Manager);
         await _roleRepository.AddAsync(tenantRole, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var token = _tokenService.GenerateToken(user, UserRole.Admin.ToString());
-        return new RegisterResponseDto(token, new AuthUserDto(user.Id, user.Name, user.Email, user.TenantId, UserRole.Admin.ToString()));
+        var token = _tokenService.GenerateToken(user, UserRole.Manager.ToString());
+        return new RegisterResponseDto(token, new AuthUserDto(user.Id, user.Name, user.Email, user.TenantId, UserRole.Manager.ToString()));
     }
 }

@@ -25,12 +25,12 @@ public class TeamController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Manager")]
     [HttpPut("{userId:guid}/role")]
     public async Task<IActionResult> UpdateRole(Guid userId, [FromBody] UpdateRoleRequest request, CancellationToken cancellationToken = default)
     {
         if (!Enum.TryParse<UserRole>(request.Role, out var role))
-            return BadRequest($"Invalid role '{request.Role}'. Valid values: Viewer, Approver, Editor, Admin.");
+            return BadRequest($"Invalid role '{request.Role}'. Valid values: Preparer, Reviewer, Manager.");
 
         await _mediator.Send(new UpdateUserRoleCommand(userId, TenantId, role), cancellationToken);
         return NoContent();

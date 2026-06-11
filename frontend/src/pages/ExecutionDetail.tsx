@@ -30,7 +30,7 @@ export function ExecutionDetail() {
   const reject = useRejectExecution()
   const cancel = useCancelExecution()
   const addComment = useAddComment(id!)
-  const { canApprove, canEdit } = useRole()
+  const { canApprove, canCancel } = useRole()
   const [commentText, setCommentText] = useState('')
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
@@ -87,7 +87,7 @@ export function ExecutionDetail() {
               </button>
             </>
           )}
-          {canEdit && (execution.status === 'Running' || execution.status === 'WaitingApproval' || execution.status === 'Pending') && (
+          {canCancel && (execution.status === 'Running' || execution.status === 'WaitingApproval' || execution.status === 'Pending') && (
             <button
               onClick={() => setShowCancelConfirm(true)}
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm"
