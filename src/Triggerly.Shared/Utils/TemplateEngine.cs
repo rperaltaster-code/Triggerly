@@ -5,7 +5,7 @@ namespace Triggerly.Shared.Utils;
 
 public static partial class TemplateEngine
 {
-    [GeneratedRegex(@"\{\{input\.([^}]+)\}\}")]
+    [GeneratedRegex(@"\{\{(input|client|service)\.([^}]+)\}\}")]
     private static partial Regex TokenRegex();
 
     public static Dictionary<string, object> Resolve(
@@ -44,7 +44,11 @@ public static partial class TemplateEngine
     private static string ReplaceTokens(string s, Dictionary<string, object> inputData) =>
         TokenRegex().Replace(s, m =>
         {
-            if (!inputData.TryGetValue(m.Groups[1].Value, out var v)) return m.Value;
+            var ns = m.Groups[1].Value;
+            var key = m.Groups[2].Value;
+            // input.fieldId → look up "fieldId"; client.x / service.x → look up "client.x" / "service.x"
+            var lookupKey = ns == "input" ? key : $"{ns}.{key}";
+            if (!inputData.TryGetValue(lookupKey, out var v)) return m.Value;
             return v switch
             {
                 JsonElement je => je.ValueKind == JsonValueKind.String

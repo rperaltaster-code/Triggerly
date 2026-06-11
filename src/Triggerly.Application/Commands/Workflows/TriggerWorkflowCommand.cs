@@ -8,5 +8,7 @@ public record TriggerWorkflowCommand(
     string TenantId,
     string? TriggeredBy,
     string? TriggeredByName,
-    Dictionary<string, object>? InputData
+    Dictionary<string, object>? InputData,
+    Guid? ClientId = null,
+    Guid? ClientServiceId = null
 ) : IRequest<WorkflowExecutionDto>;

@@ -20,6 +20,10 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<ExecutionComment> ExecutionComments => Set<ExecutionComment>();
     public DbSet<TeamInvite> TeamInvites => Set<TeamInvite>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
+    public DbSet<Client> Clients => Set<Client>();
+    public DbSet<ServiceType> ServiceTypes => Set<ServiceType>();
+    public DbSet<ClientService> ClientServices => Set<ClientService>();
+    public DbSet<TenantSettings> TenantSettings => Set<TenantSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

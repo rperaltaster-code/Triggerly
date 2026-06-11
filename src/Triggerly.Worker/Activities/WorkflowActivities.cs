@@ -2,6 +2,7 @@ using Temporalio.Activities;
 using Triggerly.Domain.Entities;
 using Triggerly.Domain.Interfaces;
 using Triggerly.Shared.Models;
+using Triggerly.Infrastructure.Persistence;
 
 namespace Triggerly.Worker.Activities;
 
@@ -13,15 +14,18 @@ public class WorkflowActivities
 {
     private readonly IWorkflowRepository _workflowRepository;
     private readonly IWorkflowExecutionRepository _executionRepository;
+    private readonly IClientServiceRepository _clientServices;
     private readonly IUnitOfWork _unitOfWork;
 
     public WorkflowActivities(
         IWorkflowRepository workflowRepository,
         IWorkflowExecutionRepository executionRepository,
+        IClientServiceRepository clientServices,
         IUnitOfWork unitOfWork)
     {
         _workflowRepository = workflowRepository;
         _executionRepository = executionRepository;
+        _clientServices = clientServices;
         _unitOfWork = unitOfWork;
     }
 
@@ -95,6 +99,20 @@ public class WorkflowActivities
         var status = success ? ExecutionStatus.Completed : ExecutionStatus.Failed;
         await _executionRepository.SetStatusAsync(
             executionId, status, errorMessage, DateTime.UtcNow);
+
+        if (success)
+        {
+            var execution = await _executionRepository.GetByIdAsync(executionId);
+            if (execution?.ClientServiceId.HasValue == true)
+            {
+                var svc = await _clientServices.GetByIdAsync(execution.ClientServiceId.Value);
+                if (svc != null)
+                {
+                    svc.RecordFiling(DateTime.UtcNow);
+                }
+            }
+        }
+
         await _unitOfWork.SaveChangesAsync();
     }
 

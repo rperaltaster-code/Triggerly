@@ -5,6 +5,7 @@ using Triggerly.Domain.Interfaces;
 using Triggerly.Shared.Contracts;
 using Triggerly.Shared.DTOs;
 using Triggerly.Shared.Models;
+using Triggerly.Shared.Utils;
 
 namespace Triggerly.Application.Commands.Workflows;
 
@@ -16,6 +17,9 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITemporalService _temporalService;
     private readonly IAuditService _audit;
+    private readonly IClientRepository _clients;
+    private readonly IClientServiceRepository _clientServices;
+    private readonly IServiceTypeRepository _serviceTypes;
 
     public TriggerWorkflowCommandHandler(
         IWorkflowRepository workflowRepository,
@@ -23,7 +27,10 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
         IWorkflowVersionRepository versionRepository,
         IUnitOfWork unitOfWork,
         ITemporalService temporalService,
-        IAuditService audit)
+        IAuditService audit,
+        IClientRepository clients,
+        IClientServiceRepository clientServices,
+        IServiceTypeRepository serviceTypes)
     {
         _workflowRepository = workflowRepository;
         _executionRepository = executionRepository;
@@ -31,6 +38,9 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
         _unitOfWork = unitOfWork;
         _temporalService = temporalService;
         _audit = audit;
+        _clients = clients;
+        _clientServices = clientServices;
+        _serviceTypes = serviceTypes;
     }
 
     public async Task<WorkflowExecutionDto> Handle(TriggerWorkflowCommand request, CancellationToken cancellationToken)
@@ -46,6 +56,36 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
 
         var latestVersion = await _versionRepository.GetLatestByWorkflowAsync(workflow.Id, cancellationToken);
 
+        // Build enriched InputData with client/service tokens if triggered for a client
+        var inputData = new Dictionary<string, object>(request.InputData ?? []);
+        string? clientName = null;
+        string? serviceTypeName = null;
+
+        if (request.ClientId.HasValue && request.ClientServiceId.HasValue)
+        {
+            var client = await _clients.GetByIdAsync(request.TenantId, request.ClientId.Value, cancellationToken);
+            var svc = await _clientServices.GetByIdAsync(request.ClientServiceId.Value, cancellationToken);
+
+            if (client != null)
+            {
+                clientName = client.Name;
+                inputData["client.name"] = client.Name;
+                inputData["client.email"] = client.Email;
+                inputData["client.phone"] = client.Phone ?? string.Empty;
+                inputData["client.irdNumber"] = client.IrdNumber ?? string.Empty;
+                inputData["client.balanceDate"] = client.BalanceDate ?? string.Empty;
+            }
+
+            if (svc != null)
+            {
+                var serviceType = await _serviceTypes.GetByIdAsync(request.TenantId, svc.ServiceTypeId, cancellationToken);
+                serviceTypeName = serviceType?.Name;
+                inputData["service.name"] = serviceType?.Name ?? string.Empty;
+                inputData["service.filingPeriod"] = svc.FilingPeriod.ToString();
+                inputData["service.nextDueAt"] = svc.NextDueAt?.ToString("yyyy-MM-dd") ?? string.Empty;
+            }
+        }
+
         var temporalWorkflowId = $"triggerly-{workflow.Id}-{Guid.NewGuid():N}";
 
         var execution = WorkflowExecution.Create(
@@ -53,10 +93,13 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
             temporalWorkflowId,
             request.TenantId,
             request.TriggeredByName ?? request.TriggeredBy,
-            request.InputData);
+            inputData);
 
         if (latestVersion is not null)
             execution.SetVersion(latestVersion.Id, latestVersion.VersionNumber);
+
+        if (request.ClientId.HasValue && request.ClientServiceId.HasValue)
+            execution.SetClient(request.ClientId.Value, request.ClientServiceId.Value);
 
         await _executionRepository.AddAsync(execution, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -70,7 +113,7 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
             execution.Id,
             request.TenantId,
             workflow.Name,
-            request.InputData,
+            inputData,
             steps,
             cancellationToken);
 
@@ -82,10 +125,11 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
             "ExecutionTriggered", "Execution", execution.Id.ToString(), workflow.Name,
             ct: cancellationToken);
 
-        return MapToDto(execution, workflow.Name, runId);
+        return MapToDto(execution, workflow.Name, runId, clientName, serviceTypeName);
     }
 
-    private static WorkflowExecutionDto MapToDto(WorkflowExecution execution, string workflowName, string runId) =>
+    private static WorkflowExecutionDto MapToDto(WorkflowExecution execution, string workflowName, string runId,
+        string? clientName = null, string? serviceTypeName = null) =>
         new(
             execution.Id,
             execution.WorkflowId,
@@ -105,5 +149,9 @@ public class TriggerWorkflowCommandHandler : IRequestHandler<TriggerWorkflowComm
             execution.SlaBreachedAt,
             [],
             [],
-            execution.WorkflowVersionNumber);
+            execution.WorkflowVersionNumber,
+            execution.ClientId,
+            execution.ClientServiceId,
+            clientName,
+            serviceTypeName);
 }

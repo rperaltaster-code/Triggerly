@@ -98,7 +98,8 @@ public class WorkflowsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new TriggerWorkflowCommand(id, TenantId, UserId, UserName, request.InputData), cancellationToken);
+            new TriggerWorkflowCommand(id, TenantId, UserId, UserName, request.InputData,
+                request.ClientId, request.ClientServiceId), cancellationToken);
         return Ok(result);
     }
 
@@ -133,7 +134,7 @@ public class WorkflowsController : ControllerBase
 
 public record CreateWorkflowRequest(string Name, string? Description);
 public record SaveFormRequest(List<FormField>? Fields);
-public record TriggerWorkflowRequest(Dictionary<string, object>? InputData);
+public record TriggerWorkflowRequest(Dictionary<string, object>? InputData, Guid? ClientId = null, Guid? ClientServiceId = null);
 
 public record SaveStepsRequest(List<StepRequest> Steps);
 public record StepRequest(

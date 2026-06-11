@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, RotateCcw, Save } from 'lucide-react'
+import { ChevronDown, ChevronUp, RotateCcw, Save, Plus, Pencil, Trash2 } from 'lucide-react'
 import { useTeam, useUpdateRole } from '../hooks/useTeam'
 import { useRole } from '../hooks/useRole'
 import { useAuth } from '../contexts/AuthContext'
 import { useEmailTemplates, useUpsertEmailTemplate, useResetEmailTemplate } from '../hooks/useEmailTemplates'
+import { useServiceTypes, useCreateServiceType, useUpdateServiceType, useDeleteServiceType } from '../hooks/useClients'
+import { useWorkflows } from '../hooks/useWorkflows'
 import { formatDistanceToNow } from 'date-fns'
-import type { UserRole, EmailTemplate } from '../types'
+import type { UserRole, EmailTemplate, ServiceType, FilingPeriod } from '../types'
+import type { SaveServiceTypePayload } from '../api/clients'
 
 const ROLES: UserRole[] = ['Preparer', 'Reviewer', 'Manager']
 
@@ -165,12 +168,107 @@ function TemplateRow({ template }: { template: EmailTemplate }) {
   )
 }
 
+const FILING_PERIODS: FilingPeriod[] = ['Monthly', 'TwoMonthly', 'SixMonthly', 'Annual', 'OneOff']
+const FILING_LABELS: Record<FilingPeriod, string> = {
+  Monthly: 'Monthly', TwoMonthly: 'Two-Monthly', SixMonthly: 'Six-Monthly', Annual: 'Annual', OneOff: 'One-Off',
+}
+const COLOR_PRESETS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
+
+function ServiceTypeModal({
+  initial,
+  onSave,
+  onClose,
+  saving,
+}: {
+  initial?: ServiceType
+  onSave: (d: SaveServiceTypePayload) => void
+  onClose: () => void
+  saving: boolean
+}) {
+  const { data: wfResult } = useWorkflows({ status: 'Active' })
+  const workflows = wfResult?.items ?? []
+  const [form, setForm] = useState<SaveServiceTypePayload>(
+    initial
+      ? { name: initial.name, description: initial.description, defaultWorkflowId: initial.defaultWorkflowId, defaultFilingPeriod: initial.defaultFilingPeriod, color: initial.color }
+      : { name: '', description: null, defaultWorkflowId: null, defaultFilingPeriod: 'Annual', color: COLOR_PRESETS[0] },
+  )
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <h2 className="text-lg font-semibold mb-4">{initial ? 'Edit Service Type' : 'New Service Type'}</h2>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+            <input className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <input className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={form.description ?? ''} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value || null }))} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Default Workflow</label>
+            <select className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={form.defaultWorkflowId ?? ''} onChange={(e) => setForm((f) => ({ ...f, defaultWorkflowId: e.target.value || null }))}>
+              <option value="">— None —</option>
+              {workflows.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Default Filing Period</label>
+            <select className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={form.defaultFilingPeriod ?? ''} onChange={(e) => setForm((f) => ({ ...f, defaultFilingPeriod: (e.target.value || null) as FilingPeriod | null }))}>
+              <option value="">— None —</option>
+              {FILING_PERIODS.map((p) => <option key={p} value={p}>{FILING_LABELS[p]}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Colour</label>
+            <div className="flex gap-2 flex-wrap">
+              {COLOR_PRESETS.map((c) => (
+                <button key={c} type="button"
+                  onClick={() => setForm((f) => ({ ...f, color: c }))}
+                  className={`w-7 h-7 rounded-full border-2 transition-transform ${form.color === c ? 'border-gray-900 scale-110' : 'border-transparent'}`}
+                  style={{ backgroundColor: c }} />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-6">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">Cancel</button>
+          <button onClick={() => onSave(form)} disabled={saving || !form.name}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function Settings() {
   const { user } = useAuth()
   const { isManager } = useRole()
   const { data: members, isLoading } = useTeam()
   const updateRole = useUpdateRole()
   const { data: emailTemplates, isLoading: templatesLoading } = useEmailTemplates()
+  const { data: serviceTypes } = useServiceTypes()
+  const createServiceType = useCreateServiceType()
+  const deleteServiceType = useDeleteServiceType()
+  const [editingServiceType, setEditingServiceType] = useState<ServiceType | null>(null)
+  const [showNewServiceType, setShowNewServiceType] = useState(false)
+
+  const handleCreateST = async (data: SaveServiceTypePayload) => {
+    await createServiceType.mutateAsync(data)
+    setShowNewServiceType(false)
+  }
+
+  const handleDeleteST = async (st: ServiceType) => {
+    if (!confirm(`Delete service type "${st.name}"?`)) return
+    await deleteServiceType.mutateAsync(st.id)
+  }
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -247,6 +345,40 @@ export function Settings() {
 
       {isManager && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-gray-800">Service Types</h2>
+              <p className="text-sm text-gray-500 mt-0.5">Define the types of services you offer to clients.</p>
+            </div>
+            <button onClick={() => setShowNewServiceType(true)}
+              className="flex items-center gap-1 text-sm bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700">
+              <Plus size={14} /> New
+            </button>
+          </div>
+          {!serviceTypes?.length ? (
+            <div className="px-6 py-8 text-center text-sm text-gray-400">No service types yet.</div>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {serviceTypes.map((st) => (
+                <li key={st.id} className="flex items-center gap-3 px-6 py-4">
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: st.color ?? '#94a3b8' }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{st.name}</p>
+                    {st.description && <p className="text-xs text-gray-500 truncate">{st.description}</p>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setEditingServiceType(st)} className="text-gray-400 hover:text-gray-600"><Pencil size={14} /></button>
+                    <button onClick={() => handleDeleteST(st)} className="text-red-400 hover:text-red-600"><Trash2 size={14} /></button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {isManager && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="font-semibold text-gray-800">Email Templates</h2>
             <p className="text-sm text-gray-500 mt-0.5">
@@ -266,6 +398,29 @@ export function Settings() {
           )}
         </div>
       )}
+
+      {showNewServiceType && (
+        <ServiceTypeModal
+          onSave={handleCreateST}
+          onClose={() => setShowNewServiceType(false)}
+          saving={createServiceType.isPending}
+        />
+      )}
+      {editingServiceType && (
+        <EditServiceTypeWrapper
+          st={editingServiceType}
+          onClose={() => setEditingServiceType(null)}
+        />
+      )}
     </div>
   )
+}
+
+function EditServiceTypeWrapper({ st, onClose }: { st: ServiceType; onClose: () => void }) {
+  const update = useUpdateServiceType(st.id)
+  const handleSave = async (data: SaveServiceTypePayload) => {
+    await update.mutateAsync(data)
+    onClose()
+  }
+  return <ServiceTypeModal initial={st} onSave={handleSave} onClose={onClose} saving={update.isPending} />
 }
