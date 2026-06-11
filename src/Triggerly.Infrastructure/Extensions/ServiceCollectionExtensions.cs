@@ -55,6 +55,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITeamInviteRepository, TeamInviteRepository>();
         services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>();
         services.AddScoped<IEmailTemplateService, EmailTemplateService>();
+        services.AddScoped<IClientRepository, ClientRepository>();
+        services.AddScoped<IServiceTypeRepository, ServiceTypeRepository>();
+        services.AddScoped<IClientServiceRepository, ClientServiceRepository>();
+        services.AddScoped<ITenantSettingsRepository, TenantSettingsRepository>();
 
         return services;
     }

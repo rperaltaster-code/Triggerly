@@ -52,9 +52,13 @@ public class WorkflowExecutionConfiguration : IEntityTypeConfiguration<WorkflowE
             .OnDelete(DeleteBehavior.Cascade)
             .Metadata.PrincipalToDependent!.SetPropertyAccessMode(PropertyAccessMode.Field);
 
+        builder.Property(e => e.ClientId);
+        builder.Property(e => e.ClientServiceId);
+
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => new { e.TenantId, e.Status });
         builder.HasIndex(e => e.TemporalWorkflowId).IsUnique();
+        builder.HasIndex(e => e.ClientId);
 
         builder.Ignore(e => e.Workflow);
     }

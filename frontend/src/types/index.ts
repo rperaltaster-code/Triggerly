@@ -15,6 +15,57 @@ export interface TeamMember {
   role: UserRole
 }
 
+export type FilingPeriod = 'Monthly' | 'TwoMonthly' | 'SixMonthly' | 'Annual' | 'OneOff'
+
+export interface Client {
+  id: string
+  tenantId: string
+  name: string
+  email: string
+  phone: string | null
+  balanceDate: string | null
+  irdNumber: string | null
+  notes: string | null
+  externalId: string | null
+  source: 'Internal' | 'Xero' | 'Myob'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ClientSummary {
+  id: string
+  name: string
+  email: string
+  phone: string | null
+  serviceCount: number
+  updatedAt: string
+}
+
+export interface ServiceType {
+  id: string
+  tenantId: string
+  name: string
+  description: string | null
+  defaultWorkflowId: string | null
+  defaultFilingPeriod: FilingPeriod | null
+  color: string | null
+  createdAt: string
+}
+
+export interface ClientService {
+  id: string
+  clientId: string
+  serviceTypeId: string
+  serviceTypeName: string
+  workflowId: string
+  workflowName: string | null
+  filingPeriod: FilingPeriod
+  lastFiledAt: string | null
+  nextDueAt: string | null
+  isActive: boolean
+  notes: string | null
+}
+
 export interface TeamInvite {
   id: string
   email: string

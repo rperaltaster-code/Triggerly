@@ -26,6 +26,9 @@ public class WorkflowExecution
     public Guid? WorkflowVersionId { get; private set; }
     public int WorkflowVersionNumber { get; private set; }
 
+    public Guid? ClientId { get; private set; }
+    public Guid? ClientServiceId { get; private set; }
+
     public WorkflowDefinition? Workflow { get; private set; }
     public IReadOnlyList<ExecutionStep> Steps => _steps.AsReadOnly();
     public IReadOnlyList<ExecutionComment> Comments => _comments.AsReadOnly();
@@ -116,6 +119,12 @@ public class WorkflowExecution
     {
         WorkflowVersionId = versionId;
         WorkflowVersionNumber = versionNumber;
+    }
+
+    public void SetClient(Guid clientId, Guid clientServiceId)
+    {
+        ClientId = clientId;
+        ClientServiceId = clientServiceId;
     }
 
     public ExecutionStep AddStep(Guid stepId, string stepName, int order)

@@ -21,7 +21,11 @@ public record WorkflowExecutionDto(
     DateTime? SlaBreachedAt,
     List<ExecutionStepDto> Steps,
     List<ExecutionCommentDto> Comments,
-    int WorkflowVersionNumber
+    int WorkflowVersionNumber,
+    Guid? ClientId = null,
+    Guid? ClientServiceId = null,
+    string? ClientName = null,
+    string? ServiceTypeName = null
 );
 
 public record WorkflowVersionDto(

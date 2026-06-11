@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, GitBranch, Zap, Activity, Settings, LogOut, Shield, CheckSquare, Users } from 'lucide-react'
+import { LayoutDashboard, GitBranch, Zap, Activity, Settings, LogOut, Shield, CheckSquare, Users, Briefcase } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuth } from '../../contexts/AuthContext'
 import { useRole } from '../../hooks/useRole'
@@ -35,6 +35,7 @@ export function Sidebar() {
     { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
     ...(canViewWorkflows ? [{ to: '/workflows', label: 'Workflows', icon: GitBranch }] : []),
     ...(isManager ? [{ to: '/automation', label: 'Automation Rules', icon: Zap }] : []),
+    { to: '/clients', label: 'Clients', icon: Briefcase },
     { to: '/executions', label: 'Executions', icon: Activity },
     { to: '/approvals', label: 'Approvals', icon: CheckSquare, badge: pendingData?.totalCount ?? 0 },
     ...(isManager || isReviewer ? [{ to: '/team', label: 'Team', icon: Users }] : []),

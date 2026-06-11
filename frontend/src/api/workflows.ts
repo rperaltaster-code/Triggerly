@@ -20,8 +20,8 @@ export const workflowsApi = {
 
   deactivate: (id: string) => api.post(`/workflows/${id}/deactivate`),
 
-  trigger: (id: string, inputData?: Record<string, unknown>) =>
-    api.post<WorkflowExecution>(`/workflows/${id}/trigger`, { inputData }).then((r) => r.data),
+  trigger: (id: string, inputData?: Record<string, unknown>, clientId?: string, clientServiceId?: string) =>
+    api.post<WorkflowExecution>(`/workflows/${id}/trigger`, { inputData, clientId, clientServiceId }).then((r) => r.data),
 
   saveSteps: (
     id: string,

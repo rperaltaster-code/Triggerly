@@ -59,8 +59,8 @@ export function useActivateWorkflow() {
 export function useTriggerWorkflow() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, inputData }: { id: string; inputData?: Record<string, unknown> }) =>
-      workflowsApi.trigger(id, inputData),
+    mutationFn: ({ id, inputData, clientId, clientServiceId }: { id: string; inputData?: Record<string, unknown>; clientId?: string; clientServiceId?: string }) =>
+      workflowsApi.trigger(id, inputData, clientId, clientServiceId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['executions'] }),
   })
 }
