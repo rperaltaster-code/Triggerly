@@ -1,15 +1,16 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, GitBranch, Zap, Activity, Settings, LogOut, Shield, CheckSquare, Users, Briefcase } from 'lucide-react'
+import { LayoutDashboard, GitBranch, Zap, Activity, Settings, LogOut, Shield, CheckSquare, Users, Briefcase, ClipboardList } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuth } from '../../contexts/AuthContext'
 import { useRole } from '../../hooks/useRole'
-import { useExecutions } from '../../hooks/useExecutions'
+import { useExecutions, useMyTasks } from '../../hooks/useExecutions'
 
 export function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { isManager, isReviewer, canViewWorkflows, canViewAuditLog, canAccessSettings } = useRole()
   const { data: pendingData } = useExecutions({ status: 'WaitingApproval', pageSize: 1 })
+  const { data: myTasks } = useMyTasks()
 
   const handleLogout = () => {
     logout()
@@ -36,6 +37,7 @@ export function Sidebar() {
     ...(canViewWorkflows ? [{ to: '/workflows', label: 'Workflows', icon: GitBranch }] : []),
     ...(isManager ? [{ to: '/automation', label: 'Automation Rules', icon: Zap }] : []),
     { to: '/clients', label: 'Clients', icon: Briefcase },
+    { to: '/my-tasks', label: 'My Tasks', icon: ClipboardList, badge: myTasks?.length ?? 0 },
     { to: '/executions', label: 'Executions', icon: Activity },
     { to: '/approvals', label: 'Approvals', icon: CheckSquare, badge: pendingData?.totalCount ?? 0 },
     ...(isManager || isReviewer ? [{ to: '/team', label: 'Team', icon: Users }] : []),

@@ -152,4 +152,62 @@ public class WorkflowExecutionRepository : IWorkflowExecutionRepository
             })
             .ToList();
     }
+
+    public async Task<List<(ExecutionStep Step, WorkflowExecution Execution)>> GetActiveAssignedStepsAsync(
+        Guid userId, string tenantId, CancellationToken cancellationToken = default)
+    {
+        var steps = await _context.ExecutionSteps
+            .Where(s => s.AssignedUserId == userId && s.Status == ExecutionStatus.Running)
+            .ToListAsync(cancellationToken);
+
+        if (steps.Count == 0) return [];
+
+        var executionIds = steps.Select(s => s.ExecutionId).Distinct().ToList();
+        var executions = await _context.Executions
+            .Where(e => executionIds.Contains(e.Id) && e.TenantId == tenantId)
+            .ToListAsync(cancellationToken);
+
+        var executionMap = executions.ToDictionary(e => e.Id);
+
+        return steps
+            .Where(s => executionMap.ContainsKey(s.ExecutionId))
+            .Select(s => (s, executionMap[s.ExecutionId]))
+            .ToList();
+    }
+
+    public async Task<Dictionary<Guid, int>> GetOpenTaskCountsByUserAsync(
+        string tenantId, CancellationToken cancellationToken = default)
+    {
+        var executionIds = await _context.Executions
+            .Where(e => e.TenantId == tenantId)
+            .Select(e => e.Id)
+            .ToListAsync(cancellationToken);
+
+        var counts = await _context.ExecutionSteps
+            .Where(s => executionIds.Contains(s.ExecutionId)
+                     && s.AssignedUserId.HasValue
+                     && s.Status == ExecutionStatus.Running)
+            .GroupBy(s => s.AssignedUserId!.Value)
+            .Select(g => new { UserId = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        return counts.ToDictionary(x => x.UserId, x => x.Count);
+    }
+
+    public Task AssignStepAsync(Guid executionId, Guid stepId, Guid userId, string userName, DateTime? dueAt,
+        CancellationToken cancellationToken = default) =>
+        _context.ExecutionSteps
+            .Where(s => s.ExecutionId == executionId && s.StepId == stepId)
+            .ExecuteUpdateAsync(u => u
+                .SetProperty(s => s.AssignedUserId, userId)
+                .SetProperty(s => s.AssignedUserName, userName)
+                .SetProperty(s => s.DueAt, dueAt), cancellationToken);
+
+    public Task ReassignStepAsync(Guid executionId, Guid stepId, Guid userId, string userName,
+        CancellationToken cancellationToken = default) =>
+        _context.ExecutionSteps
+            .Where(s => s.ExecutionId == executionId && s.StepId == stepId)
+            .ExecuteUpdateAsync(u => u
+                .SetProperty(s => s.AssignedUserId, userId)
+                .SetProperty(s => s.AssignedUserName, userName), cancellationToken);
 }

@@ -39,12 +39,38 @@ public record ExecutionStepDto(
     Guid Id,
     Guid StepId,
     string StepName,
+    string StepType,
     ExecutionStatus Status,
     int Order,
     string? Output,
     string? ErrorMessage,
     DateTime? StartedAt,
-    DateTime? CompletedAt
+    DateTime? CompletedAt,
+    Guid? AssignedUserId = null,
+    string? AssignedUserName = null,
+    DateTime? DueAt = null
+);
+
+public record MyTaskDto(
+    Guid ExecutionId,
+    Guid StepId,
+    string WorkflowName,
+    string StepName,
+    string StepType,
+    ExecutionStatus StepStatus,
+    string? ClientName,
+    string? ServiceTypeName,
+    DateTime? StartedAt,
+    DateTime? DueAt,
+    string TenantId
+);
+
+public record TeamWorkloadDto(
+    Guid UserId,
+    string Name,
+    string Email,
+    string Role,
+    int OpenTaskCount
 );
 
 public record ExecutionCommentDto(

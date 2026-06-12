@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, CheckCircle, XCircle, Clock, AlertTriangle, MessageSquare, Send, Ban } from 'lucide-react'
-import { useExecution, useApproveExecution, useRejectExecution, useCancelExecution, useAddComment } from '../hooks/useExecutions'
+import { ArrowLeft, CheckCircle, XCircle, Clock, AlertTriangle, MessageSquare, Send, Ban, UserCheck } from 'lucide-react'
+import { useExecution, useApproveExecution, useRejectExecution, useCancelExecution, useAddComment, useReassignStep } from '../hooks/useExecutions'
 import { useWorkflow } from '../hooks/useWorkflows'
+import { useTeam } from '../hooks/useTeam'
 import { RejectModal } from '../components/executions/RejectModal'
 import { Badge } from '../components/ui/Badge'
 import { useRole } from '../hooks/useRole'
 import { format, formatDistanceToNow } from 'date-fns'
-import type { ExecutionStatus } from '../types'
+import type { ExecutionStatus, ExecutionStep } from '../types'
 
 const stepStatusIcon: Record<ExecutionStatus, React.ReactNode> = {
   Completed: <CheckCircle size={16} className="text-green-500" />,
@@ -30,10 +31,14 @@ export function ExecutionDetail() {
   const reject = useRejectExecution()
   const cancel = useCancelExecution()
   const addComment = useAddComment(id!)
-  const { canApprove, canCancel } = useRole()
+  const reassignStep = useReassignStep()
+  const { canApprove, canCancel, isManager } = useRole()
+  const { data: teamMembers } = useTeam()
   const [commentText, setCommentText] = useState('')
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [reassignStepId, setReassignStepId] = useState<string | null>(null)
+  const [reassignUserId, setReassignUserId] = useState('')
 
   if (isLoading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>
   if (!execution) return <div className="text-center py-12 text-gray-500">Execution not found</div>
@@ -164,13 +169,73 @@ export function ExecutionDetail() {
         ) : (
           <div className="space-y-2">
             {execution.steps.map((step) => (
-              <div key={step.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                <div className="flex-shrink-0">{stepStatusIcon[step.status] ?? null}</div>
-                <div className="flex-1">
-                  <span className="font-medium text-sm text-gray-900">{step.stepName}</span>
-                  {step.errorMessage && <p className="text-xs text-red-500 mt-0.5">{step.errorMessage}</p>}
+              <div key={step.id}>
+                <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-shrink-0">{stepStatusIcon[step.status] ?? null}</div>
+                  <div className="flex-1">
+                    <span className="font-medium text-sm text-gray-900">{step.stepName}</span>
+                    {step.assignedUserName && (
+                      <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                        <UserCheck size={11} />
+                        Assigned to <span className="font-medium">{step.assignedUserName}</span>
+                        {step.dueAt && (
+                          <span className="ml-1 text-gray-400">
+                            · Due {formatDistanceToNow(new Date(step.dueAt), { addSuffix: true })}
+                          </span>
+                        )}
+                      </p>
+                    )}
+                    {step.errorMessage && <p className="text-xs text-red-500 mt-0.5">{step.errorMessage}</p>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge status={step.status} />
+                    {isManager && step.status === 'Running' && (
+                      <button
+                        onClick={() => {
+                          setReassignStepId(step.stepId)
+                          setReassignUserId('')
+                        }}
+                        className="text-xs px-2 py-1 border border-gray-200 rounded-lg text-gray-500 hover:bg-white"
+                      >
+                        Reassign
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <Badge status={step.status} />
+
+                {isManager && reassignStepId === step.stepId && (
+                  <div className="mt-1 ml-10 flex items-center gap-2">
+                    <select
+                      value={reassignUserId}
+                      onChange={(e) => setReassignUserId(e.target.value)}
+                      className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select staff member…</option>
+                      {teamMembers?.map((m) => (
+                        <option key={m.userId} value={m.userId}>{m.name} ({m.role})</option>
+                      ))}
+                    </select>
+                    <button
+                      disabled={!reassignUserId || reassignStep.isPending}
+                      onClick={() => {
+                        if (!reassignUserId) return
+                        reassignStep.mutate(
+                          { executionId: execution.id, stepId: step.stepId, newUserId: reassignUserId },
+                          { onSuccess: () => setReassignStepId(null) }
+                        )
+                      }}
+                      className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {reassignStep.isPending ? 'Reassigning…' : 'Confirm'}
+                    </button>
+                    <button
+                      onClick={() => setReassignStepId(null)}
+                      className="text-sm px-3 py-1.5 border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

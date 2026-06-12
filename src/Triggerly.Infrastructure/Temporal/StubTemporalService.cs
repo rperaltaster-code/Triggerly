@@ -84,6 +84,11 @@ public class StubTemporalService : ITemporalService
         CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
+    public Task SendActionCompleteSignalAsync(
+        string temporalWorkflowId, string actorId, string actorName,
+        CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
     public Task CancelWorkflowAsync(string temporalWorkflowId, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 

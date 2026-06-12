@@ -41,3 +41,10 @@ export function useRevokeInvite() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['team-invites'] }),
   })
 }
+
+export function useTeamWorkload() {
+  return useQuery({
+    queryKey: ['team-workload'],
+    queryFn: teamApi.getWorkload,
+  })
+}

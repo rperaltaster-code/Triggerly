@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Temporalio.Activities;
+using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Entities;
 using Triggerly.Domain.Interfaces;
 using Triggerly.Shared.Models;
@@ -10,22 +12,27 @@ public record WorkflowStepInfo(
     Guid Id, string Name, string Type, int Order,
     Dictionary<string, object> Config, string? ApproverEmail);
 
+public record AssignedUserResult(Guid UserId, string UserName, string Email);
+
 public class WorkflowActivities
 {
     private readonly IWorkflowRepository _workflowRepository;
     private readonly IWorkflowExecutionRepository _executionRepository;
     private readonly IClientServiceRepository _clientServices;
+    private readonly IAssignmentResolverService _assignmentResolver;
     private readonly IUnitOfWork _unitOfWork;
 
     public WorkflowActivities(
         IWorkflowRepository workflowRepository,
         IWorkflowExecutionRepository executionRepository,
         IClientServiceRepository clientServices,
+        IAssignmentResolverService assignmentResolver,
         IUnitOfWork unitOfWork)
     {
         _workflowRepository = workflowRepository;
         _executionRepository = executionRepository;
         _clientServices = clientServices;
+        _assignmentResolver = assignmentResolver;
         _unitOfWork = unitOfWork;
     }
 
@@ -42,14 +49,14 @@ public class WorkflowActivities
     }
 
     [Activity]
-    public async Task UpdateExecutionStatusAsync(Guid executionId, Guid stepId, int stepOrder, string stepName, string status)
+    public async Task UpdateExecutionStatusAsync(Guid executionId, Guid stepId, int stepOrder, string stepName, string stepType, string status)
     {
         await _executionRepository.UpdateCurrentStepAsync(executionId, stepOrder, stepName);
 
         var exists = await _executionRepository.StepExistsAsync(executionId, stepId);
         if (!exists)
         {
-            var step = ExecutionStep.Create(executionId, stepId, stepName, stepOrder);
+            var step = ExecutionStep.Create(executionId, stepId, stepName, stepOrder, stepType);
             step.Start();
             await _executionRepository.AddStepAsync(step);
             await _unitOfWork.SaveChangesAsync();
@@ -57,7 +64,34 @@ public class WorkflowActivities
     }
 
     [Activity]
-    public async Task RequestApprovalAsync(Guid executionId, Guid stepId, string stepName, string? approverEmail)
+    public async Task<AssignedUserResult?> ResolveAndAssignStepAsync(
+        Guid executionId, Guid stepId, Dictionary<string, object> config, string tenantId)
+    {
+        var assigned = await _assignmentResolver.ResolveAsync(
+            config, tenantId, ActivityExecutionContext.Current.CancellationToken);
+
+        if (assigned is null) return null;
+
+        var slaHours = config.TryGetValue("slaHours", out var h) ? Convert.ToInt32(GetStringValue(h) ?? "72") : 72;
+        var dueAt = DateTime.UtcNow.AddHours(slaHours);
+
+        await _executionRepository.AssignStepAsync(
+            executionId, stepId, assigned.UserId, assigned.UserName, dueAt,
+            ActivityExecutionContext.Current.CancellationToken);
+        await _unitOfWork.SaveChangesAsync(ActivityExecutionContext.Current.CancellationToken);
+
+        return new AssignedUserResult(assigned.UserId, assigned.UserName, assigned.Email);
+    }
+
+    private static string? GetStringValue(object? v) => v switch
+    {
+        string s => s,
+        JsonElement je => je.ValueKind == JsonValueKind.String ? je.GetString() : je.ToString(),
+        _ => v?.ToString()
+    };
+
+    [Activity]
+    public async Task RequestApprovalAsync(Guid executionId, Guid stepId, string stepName)
     {
         await _executionRepository.SetStatusAsync(executionId, ExecutionStatus.WaitingApproval, null, null);
 
@@ -65,15 +99,15 @@ public class WorkflowActivities
         if (!exists)
         {
             var currentOrder = await _executionRepository.GetCurrentStepOrderAsync(executionId);
-            var step = ExecutionStep.Create(executionId, stepId, stepName, currentOrder);
+            var step = ExecutionStep.Create(executionId, stepId, stepName, currentOrder, "Approval");
             step.Start();
             await _executionRepository.AddStepAsync(step);
             await _unitOfWork.SaveChangesAsync();
         }
 
         ActivityExecutionContext.Current.Logger.LogInformation(
-            "Approval requested for execution {ExecutionId}, step {StepName}, approver: {Approver}",
-            executionId, stepName, approverEmail ?? "any");
+            "Approval requested for execution {ExecutionId}, step {StepName}",
+            executionId, stepName);
     }
 
     [Activity]

@@ -189,6 +189,37 @@ public class NotificationActivities
         }
     }
 
+    [Activity]
+    public async Task SendTaskAssignedNotificationAsync(
+        string tenantId, string assigneeEmail, string assigneeName, string stepName,
+        string executionId, string workflowName, string? clientName, int slaHours)
+    {
+        var tasksUrl = $"{_baseUrl}/my-tasks";
+
+        var tokens = new Dictionary<string, string>
+        {
+            ["workflowName"] = workflowName,
+            ["stepName"] = stepName,
+            ["executionId"] = executionId,
+            ["approvalsUrl"] = tasksUrl,
+            ["slaHours"] = slaHours.ToString(),
+        };
+        var (subject, body) = await _templateService.GetRenderedAsync(
+            tenantId, "approval_request", tokens,
+            ActivityExecutionContext.Current.CancellationToken);
+
+        await _emailService.SendAsync(assigneeEmail, subject, body,
+            ActivityExecutionContext.Current.CancellationToken);
+
+        if (!string.IsNullOrEmpty(_tenantSlackWebhookUrl))
+        {
+            var clientPart = string.IsNullOrEmpty(clientName) ? string.Empty : $" · Client: {clientName}";
+            await PostSlackMessageAsync(
+                _tenantSlackWebhookUrl,
+                $":clipboard: *New task assigned to {assigneeName}* — *{workflowName}* / {stepName}{clientPart} · Due: {slaHours}h\n<{tasksUrl}|Open My Tasks>");
+        }
+    }
+
     private async Task PostSlackMessageAsync(string webhookUrl, string text)
     {
         var client = _httpClientFactory.CreateClient("webhook");

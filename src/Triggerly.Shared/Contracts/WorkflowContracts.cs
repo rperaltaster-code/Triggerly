@@ -38,6 +38,11 @@ public record ApprovalSignal(
     string? Reason
 );
 
+public record ActionCompleteSignal(
+    string ActorId,
+    string ActorName
+);
+
 [Workflow]
 public interface IAutomationWorkflow
 {
@@ -46,6 +51,9 @@ public interface IAutomationWorkflow
 
     [WorkflowSignal]
     Task ApprovalSignalAsync(ApprovalSignal signal);
+
+    [WorkflowSignal]
+    Task ActionCompleteSignalAsync(ActionCompleteSignal signal);
 
     [WorkflowQuery]
     string GetCurrentStatus();

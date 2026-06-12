@@ -10,6 +10,7 @@ namespace Triggerly.Worker.Workflows;
 public class AutomationWorkflow : IAutomationWorkflow
 {
     private ApprovalSignal? _approvalSignal;
+    private ActionCompleteSignal? _actionCompleteSignal;
     private string _currentStatus = "Initializing";
 
     [WorkflowRun]
@@ -48,7 +49,7 @@ public class AutomationWorkflow : IAutomationWorkflow
 
                 await Workflow.ExecuteActivityAsync(
                     (WorkflowActivities act) => act.UpdateExecutionStatusAsync(
-                        input.ExecutionId, currentStep.Id, currentStep.Order, currentStep.Name, "Running"),
+                        input.ExecutionId, currentStep.Id, currentStep.Order, currentStep.Name, currentStep.Type, "Running"),
                     activityOptions);
 
                 Guid? nextStepId = currentStep.NextStepId;
@@ -65,14 +66,34 @@ public class AutomationWorkflow : IAutomationWorkflow
 
                         await Workflow.ExecuteActivityAsync(
                             (WorkflowActivities act) => act.RequestApprovalAsync(
-                                input.ExecutionId, currentStep.Id, currentStep.Name, currentStep.ApproverEmail),
+                                input.ExecutionId, currentStep.Id, currentStep.Name),
                             activityOptions);
 
-                        if (!string.IsNullOrEmpty(currentStep.ApproverEmail))
+                        // Resolve assignee: prefer dynamic assignment config over static approverEmail
+                        string? effectiveApproverEmail = currentStep.ApproverEmail;
+                        var approvalAssignMode = GetString(resolvedConfig, "assignmentMode");
+                        if (!string.IsNullOrEmpty(approvalAssignMode))
+                        {
+                            var approvalAssigned = await Workflow.ExecuteActivityAsync(
+                                (WorkflowActivities act) => act.ResolveAndAssignStepAsync(
+                                    input.ExecutionId, currentStep.Id, resolvedConfig, input.TenantId),
+                                activityOptions);
+                            if (approvalAssigned != null)
+                            {
+                                effectiveApproverEmail = approvalAssigned.Email;
+                                await Workflow.ExecuteActivityAsync(
+                                    (NotificationActivities act) => act.SendTaskAssignedNotificationAsync(
+                                        input.TenantId, approvalAssigned.Email, approvalAssigned.UserName,
+                                        currentStep.Name, input.ExecutionId.ToString(), input.WorkflowName,
+                                        null, slaHours),
+                                    activityOptions);
+                            }
+                        }
+                        else if (!string.IsNullOrEmpty(effectiveApproverEmail))
                         {
                             await Workflow.ExecuteActivityAsync(
                                 (NotificationActivities act) => act.SendApprovalRequestNotificationAsync(
-                                    input.TenantId, currentStep.ApproverEmail, currentStep.Name,
+                                    input.TenantId, effectiveApproverEmail, currentStep.Name,
                                     input.ExecutionId.ToString(), input.WorkflowName),
                                 activityOptions);
                         }
@@ -93,10 +114,10 @@ public class AutomationWorkflow : IAutomationWorkflow
 
                             if (pct < 100)
                             {
-                                if (!string.IsNullOrEmpty(currentStep.ApproverEmail))
+                                if (!string.IsNullOrEmpty(effectiveApproverEmail))
                                     await Workflow.ExecuteActivityAsync(
                                         (NotificationActivities act) => act.SendApprovalReminderAsync(
-                                            input.TenantId, currentStep.ApproverEmail, currentStep.Name,
+                                            input.TenantId, effectiveApproverEmail, currentStep.Name,
                                             input.ExecutionId.ToString(), input.WorkflowName, pct, slaHours),
                                         activityOptions);
 
@@ -104,7 +125,7 @@ public class AutomationWorkflow : IAutomationWorkflow
                                 if (!string.IsNullOrEmpty(escalationEmail) && pct == breakpoints[^2])
                                     await Workflow.ExecuteActivityAsync(
                                         (NotificationActivities act) => act.SendEscalationNotificationAsync(
-                                            input.TenantId, escalationEmail, currentStep.ApproverEmail, currentStep.Name,
+                                            input.TenantId, escalationEmail, effectiveApproverEmail, currentStep.Name,
                                             input.ExecutionId.ToString(), input.WorkflowName, slaHours),
                                         activityOptions);
                             }
@@ -121,11 +142,11 @@ public class AutomationWorkflow : IAutomationWorkflow
                                 (WorkflowActivities act) => act.MarkSlaBreachedAsync(input.ExecutionId),
                                 activityOptions);
 
-                            if (!string.IsNullOrEmpty(currentStep.ApproverEmail))
+                            if (!string.IsNullOrEmpty(effectiveApproverEmail))
                             {
                                 await Workflow.ExecuteActivityAsync(
                                     (NotificationActivities act) => act.SendSlaBreachNotificationAsync(
-                                        input.TenantId, currentStep.ApproverEmail, currentStep.Name,
+                                        input.TenantId, effectiveApproverEmail, currentStep.Name,
                                         input.ExecutionId.ToString(), input.WorkflowName, slaHours),
                                     activityOptions);
                             }
@@ -188,10 +209,79 @@ public class AutomationWorkflow : IAutomationWorkflow
                         break;
 
                     default:
-                        await Workflow.ExecuteActivityAsync(
-                            (WorkflowActivities act) => act.ExecuteActionStepAsync(
-                                input.ExecutionId, currentStep.Id, resolvedConfig, context),
-                            activityOptions);
+                        var actionAssignMode = GetString(resolvedConfig, "assignmentMode");
+                        if (!string.IsNullOrEmpty(actionAssignMode))
+                        {
+                            _currentStatus = $"Awaiting action: {currentStep.Name}";
+                            _actionCompleteSignal = null;
+
+                            var actionSlaHours = resolvedConfig.TryGetValue("slaHours", out var ah)
+                                ? Convert.ToInt32(ah) : 72;
+                            var actionReminderPercents = GetIntList(resolvedConfig, "reminderAtPercent");
+
+                            var actionAssigned = await Workflow.ExecuteActivityAsync(
+                                (WorkflowActivities act) => act.ResolveAndAssignStepAsync(
+                                    input.ExecutionId, currentStep.Id, resolvedConfig, input.TenantId),
+                                activityOptions);
+
+                            if (actionAssigned != null)
+                            {
+                                var clientName = input.InputData.TryGetValue("client.name", out var cn)
+                                    ? cn?.ToString() : null;
+                                await Workflow.ExecuteActivityAsync(
+                                    (NotificationActivities act) => act.SendTaskAssignedNotificationAsync(
+                                        input.TenantId, actionAssigned.Email, actionAssigned.UserName,
+                                        currentStep.Name, input.ExecutionId.ToString(), input.WorkflowName,
+                                        clientName, actionSlaHours),
+                                    activityOptions);
+                            }
+
+                            var actionBreakpoints = actionReminderPercents.OrderBy(p => p).Append(100).ToList();
+                            double actionPrevPct = 0;
+                            bool actionSignalReceived = false;
+
+                            foreach (var pct in actionBreakpoints)
+                            {
+                                var increment = actionSlaHours * (pct - actionPrevPct) / 100.0;
+                                actionSignalReceived = await Workflow.WaitConditionAsync(
+                                    () => _actionCompleteSignal != null,
+                                    TimeSpan.FromHours(increment));
+
+                                if (actionSignalReceived) break;
+
+                                if (pct < 100 && actionAssigned != null)
+                                    await Workflow.ExecuteActivityAsync(
+                                        (NotificationActivities act) => act.SendApprovalReminderAsync(
+                                            input.TenantId, actionAssigned.Email, currentStep.Name,
+                                            input.ExecutionId.ToString(), input.WorkflowName, pct, actionSlaHours),
+                                        activityOptions);
+
+                                actionPrevPct = pct;
+                            }
+
+                            if (!actionSignalReceived)
+                            {
+                                _currentStatus = "TimedOut";
+                                var timeoutMsg = $"SLA timeout: no action within {actionSlaHours} hours";
+                                await Workflow.ExecuteActivityAsync(
+                                    (WorkflowActivities act) => act.MarkSlaBreachedAsync(input.ExecutionId),
+                                    activityOptions);
+                                await Workflow.ExecuteActivityAsync(
+                                    (WorkflowActivities act) => act.CompleteStepAsync(
+                                        input.ExecutionId, currentStep.Id, false, timeoutMsg),
+                                    activityOptions);
+                                return new AutomationWorkflowResult(false, context, timeoutMsg);
+                            }
+
+                            _actionCompleteSignal = null;
+                        }
+                        else
+                        {
+                            await Workflow.ExecuteActivityAsync(
+                                (WorkflowActivities act) => act.ExecuteActionStepAsync(
+                                    input.ExecutionId, currentStep.Id, resolvedConfig, context),
+                                activityOptions);
+                        }
                         break;
                 }
 
@@ -227,6 +317,13 @@ public class AutomationWorkflow : IAutomationWorkflow
     public Task ApprovalSignalAsync(ApprovalSignal signal)
     {
         _approvalSignal = signal;
+        return Task.CompletedTask;
+    }
+
+    [WorkflowSignal]
+    public Task ActionCompleteSignalAsync(ActionCompleteSignal signal)
+    {
+        _actionCompleteSignal = signal;
         return Task.CompletedTask;
     }
 

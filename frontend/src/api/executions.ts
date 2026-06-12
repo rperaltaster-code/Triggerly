@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { WorkflowExecution, ExecutionComment, PagedResult, ExecutionStatus } from '../types'
+import type { WorkflowExecution, ExecutionComment, PagedResult, ExecutionStatus, MyTask } from '../types'
 
 export const executionsApi = {
   list: (params?: { page?: number; pageSize?: number; workflowId?: string; status?: ExecutionStatus }) =>
@@ -20,4 +20,13 @@ export const executionsApi = {
 
   addComment: (id: string, content: string) =>
     api.post<ExecutionComment>(`/executions/${id}/comments`, { content }).then((r) => r.data),
+
+  getMyTasks: () =>
+    api.get<MyTask[]>('/executions/my-tasks').then((r) => r.data),
+
+  completeStep: (executionId: string, stepId: string) =>
+    api.post(`/executions/${executionId}/steps/${stepId}/complete`),
+
+  reassignStep: (executionId: string, stepId: string, newUserId: string) =>
+    api.post(`/executions/${executionId}/steps/${stepId}/reassign`, { newUserId }),
 }
