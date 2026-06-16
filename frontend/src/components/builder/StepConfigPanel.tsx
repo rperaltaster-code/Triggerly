@@ -179,7 +179,7 @@ export function StepConfigPanel({ node, onClose, onUpdate, formFields = [] }: St
               </div>
             )}
 
-            {config.assignmentMode && config.assignmentMode !== 'specific' && (
+            {!!config.assignmentMode && config.assignmentMode !== 'specific' && (
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
                 <select
@@ -192,7 +192,7 @@ export function StepConfigPanel({ node, onClose, onUpdate, formFields = [] }: St
               </div>
             )}
 
-            {config.assignmentMode && (
+            {!!config.assignmentMode && (
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">SLA (hours)</label>
                 <input

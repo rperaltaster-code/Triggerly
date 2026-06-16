@@ -8,7 +8,7 @@ import { RejectModal } from '../components/executions/RejectModal'
 import { Badge } from '../components/ui/Badge'
 import { useRole } from '../hooks/useRole'
 import { format, formatDistanceToNow } from 'date-fns'
-import type { ExecutionStatus, ExecutionStep } from '../types'
+import type { ExecutionStatus } from '../types'
 
 const stepStatusIcon: Record<ExecutionStatus, React.ReactNode> = {
   Completed: <CheckCircle size={16} className="text-green-500" />,
