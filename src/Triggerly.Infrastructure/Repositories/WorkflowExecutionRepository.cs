@@ -178,18 +178,15 @@ public class WorkflowExecutionRepository : IWorkflowExecutionRepository
     public async Task<Dictionary<Guid, int>> GetOpenTaskCountsByUserAsync(
         string tenantId, CancellationToken cancellationToken = default)
     {
-        var executionIds = await _context.Executions
-            .Where(e => e.TenantId == tenantId)
-            .Select(e => e.Id)
-            .ToListAsync(cancellationToken);
-
-        var counts = await _context.ExecutionSteps
-            .Where(s => executionIds.Contains(s.ExecutionId)
-                     && s.AssignedUserId.HasValue
-                     && s.Status == ExecutionStatus.Running)
-            .GroupBy(s => s.AssignedUserId!.Value)
-            .Select(g => new { UserId = g.Key, Count = g.Count() })
-            .ToListAsync(cancellationToken);
+        var counts = await (
+            from step in _context.ExecutionSteps
+            join exec in _context.Executions on step.ExecutionId equals exec.Id
+            where exec.TenantId == tenantId
+                  && step.AssignedUserId.HasValue
+                  && step.Status == ExecutionStatus.Running
+            group step by step.AssignedUserId!.Value into g
+            select new { UserId = g.Key, Count = g.Count() }
+        ).ToListAsync(cancellationToken);
 
         return counts.ToDictionary(x => x.UserId, x => x.Count);
     }

@@ -46,6 +46,12 @@ public class CompleteActionStepCommandHandler : IRequestHandler<CompleteActionSt
         var step = execution.Steps.FirstOrDefault(s => s.StepId == request.StepId)
             ?? throw new KeyNotFoundException($"Step {request.StepId} not found.");
 
+        if (step.StepType != "Action")
+            throw new InvalidOperationException("Only Action steps can be completed via this endpoint.");
+
+        if (step.Status != ExecutionStatus.Running)
+            throw new InvalidOperationException("This step is not currently active.");
+
         if (!Guid.TryParse(request.UserId, out var userId))
             throw new UnauthorizedAccessException("Invalid user ID.");
 
@@ -57,7 +63,7 @@ public class CompleteActionStepCommandHandler : IRequestHandler<CompleteActionSt
             throw new UnauthorizedAccessException("You are not assigned to this step.");
 
         await _temporalService.SendActionCompleteSignalAsync(
-            execution.TemporalWorkflowId, request.UserId, request.UserName, cancellationToken);
+            execution.TemporalWorkflowId, request.StepId, request.UserId, request.UserName, cancellationToken);
 
         await _audit.LogAsync(request.TenantId, request.UserId, request.UserName,
             "ActionStepCompleted", "ExecutionStep", step.Id.ToString(), step.StepName,

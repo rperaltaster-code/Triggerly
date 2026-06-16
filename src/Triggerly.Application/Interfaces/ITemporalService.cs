@@ -15,7 +15,7 @@ public interface ITemporalService
 
     Task SendApprovalSignalAsync(string temporalWorkflowId, bool approved, string actorId, string? reason = null, CancellationToken cancellationToken = default);
 
-    Task SendActionCompleteSignalAsync(string temporalWorkflowId, string actorId, string actorName, CancellationToken cancellationToken = default);
+    Task SendActionCompleteSignalAsync(string temporalWorkflowId, Guid stepId, string actorId, string actorName, CancellationToken cancellationToken = default);
 
     Task CancelWorkflowAsync(string temporalWorkflowId, CancellationToken cancellationToken = default);
 

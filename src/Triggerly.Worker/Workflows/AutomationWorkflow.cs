@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Temporalio.Workflows;
 using Triggerly.Shared.Contracts;
@@ -11,6 +12,7 @@ public class AutomationWorkflow : IAutomationWorkflow
 {
     private ApprovalSignal? _approvalSignal;
     private ActionCompleteSignal? _actionCompleteSignal;
+    private Guid? _pendingActionStepId;
     private string _currentStatus = "Initializing";
 
     [WorkflowRun]
@@ -59,11 +61,13 @@ public class AutomationWorkflow : IAutomationWorkflow
                     case "Approval":
                         _currentStatus = $"Awaiting approval: {currentStep.Name}";
 
-                        var slaHours = resolvedConfig.TryGetValue("slaHours", out var h)
-                            ? Convert.ToInt32(h) : 72;
+                        var slaHours = GetInt(resolvedConfig, "slaHours", 72);
                         var reminderPercents = GetIntList(resolvedConfig, "reminderAtPercent");
                         var escalationEmail = GetString(resolvedConfig, "escalationEmail");
 
+                        // NOTE: approverEmail param was removed in this version — any execution
+                        // mid-Approval-step at deploy time will get a Temporal non-determinism error.
+                        // Drain or reset in-flight Approval workflows before deploying.
                         await Workflow.ExecuteActivityAsync(
                             (WorkflowActivities act) => act.RequestApprovalAsync(
                                 input.ExecutionId, currentStep.Id, currentStep.Name),
@@ -214,9 +218,9 @@ public class AutomationWorkflow : IAutomationWorkflow
                         {
                             _currentStatus = $"Awaiting action: {currentStep.Name}";
                             _actionCompleteSignal = null;
+                            _pendingActionStepId = currentStep.Id;
 
-                            var actionSlaHours = resolvedConfig.TryGetValue("slaHours", out var ah)
-                                ? Convert.ToInt32(ah) : 72;
+                            var actionSlaHours = GetInt(resolvedConfig, "slaHours", 72);
                             var actionReminderPercents = GetIntList(resolvedConfig, "reminderAtPercent");
 
                             var actionAssigned = await Workflow.ExecuteActivityAsync(
@@ -274,6 +278,7 @@ public class AutomationWorkflow : IAutomationWorkflow
                             }
 
                             _actionCompleteSignal = null;
+                            _pendingActionStepId = null;
                         }
                         else
                         {
@@ -323,7 +328,10 @@ public class AutomationWorkflow : IAutomationWorkflow
     [WorkflowSignal]
     public Task ActionCompleteSignalAsync(ActionCompleteSignal signal)
     {
-        _actionCompleteSignal = signal;
+        // Only accept if the signal matches the step we're currently waiting on,
+        // preventing a late/duplicate signal from unblocking the wrong step.
+        if (_pendingActionStepId.HasValue && signal.StepId == _pendingActionStepId.Value)
+            _actionCompleteSignal = signal;
         return Task.CompletedTask;
     }
 
@@ -353,14 +361,12 @@ public class AutomationWorkflow : IAutomationWorkflow
     }
 
     private static string? GetString(Dictionary<string, object> dict, string key) =>
-        dict.TryGetValue(key, out var v) ? GetStringValue(v) : null;
+        dict.TryGetValue(key, out var v) ? JsonHelpers.GetString(v) : null;
 
-    private static string? GetStringValue(object? v) => v switch
-    {
-        string s => s,
-        JsonElement je => je.ValueKind == JsonValueKind.String ? je.GetString() : je.ToString(),
-        _ => v?.ToString()
-    };
+    private static int GetInt(Dictionary<string, object> dict, string key, int defaultValue) =>
+        dict.TryGetValue(key, out var v) ? JsonHelpers.GetInt(v, defaultValue) : defaultValue;
+
+    private static string? GetStringValue(object? v) => JsonHelpers.GetString(v);
 
     private static List<int> GetIntList(Dictionary<string, object> config, string key)
     {

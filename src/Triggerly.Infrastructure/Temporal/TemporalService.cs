@@ -57,14 +57,14 @@ public class TemporalService : ITemporalService
     }
 
     public async Task SendActionCompleteSignalAsync(
-        string temporalWorkflowId, string actorId, string actorName,
+        string temporalWorkflowId, Guid stepId, string actorId, string actorName,
         CancellationToken cancellationToken = default)
     {
         try
         {
             var handle = _client.GetWorkflowHandle(temporalWorkflowId);
             await handle.SignalAsync(
-                (IAutomationWorkflow wf) => wf.ActionCompleteSignalAsync(new ActionCompleteSignal(actorId, actorName)));
+                (IAutomationWorkflow wf) => wf.ActionCompleteSignalAsync(new ActionCompleteSignal(stepId, actorId, actorName)));
         }
         catch (RpcException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
         {

@@ -101,31 +101,21 @@ public class GetMyTasksQueryHandler : IRequestHandler<GetMyTasksQuery, List<MyTa
         if (!Guid.TryParse(request.UserId, out var userId)) return [];
 
         var pairs = await _repository.GetActiveAssignedStepsAsync(userId, request.TenantId, cancellationToken);
-        var tasks = new List<MyTaskDto>();
+        if (pairs.Count == 0) return [];
 
-        foreach (var (step, execution) in pairs)
+        var workflowIds = pairs.Select(p => p.Execution.WorkflowId).Distinct();
+        var workflows = await _workflowRepository.GetByIdsAsync(workflowIds, cancellationToken);
+
+        return pairs.Select(p =>
         {
-            var workflow = await _workflowRepository.GetByIdAsync(execution.WorkflowId, cancellationToken);
-            var clientName = execution.InputData.TryGetValue("client.name", out var cn)
-                ? cn?.ToString() : null;
-            var serviceName = execution.InputData.TryGetValue("service.name", out var sn)
-                ? sn?.ToString() : null;
-
-            tasks.Add(new MyTaskDto(
-                execution.Id,
-                step.StepId,
-                workflow?.Name ?? string.Empty,
-                step.StepName,
-                step.StepType,
-                step.Status,
-                clientName,
-                serviceName,
-                step.StartedAt,
-                step.DueAt,
-                execution.TenantId));
-        }
-
-        return tasks;
+            var (step, execution) = p;
+            var workflowName = workflows.TryGetValue(execution.WorkflowId, out var wf) ? wf.Name : string.Empty;
+            var clientName = execution.InputData.TryGetValue("client.name", out var cn) ? cn?.ToString() : null;
+            var serviceName = execution.InputData.TryGetValue("service.name", out var sn) ? sn?.ToString() : null;
+            return new MyTaskDto(
+                execution.Id, step.StepId, workflowName, step.StepName, step.StepType,
+                step.Status, clientName, serviceName, step.StartedAt, step.DueAt, execution.TenantId);
+        }).ToList();
     }
 }
 

@@ -85,7 +85,7 @@ public class StubTemporalService : ITemporalService
         => Task.CompletedTask;
 
     public Task SendActionCompleteSignalAsync(
-        string temporalWorkflowId, string actorId, string actorName,
+        string temporalWorkflowId, Guid stepId, string actorId, string actorName,
         CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 

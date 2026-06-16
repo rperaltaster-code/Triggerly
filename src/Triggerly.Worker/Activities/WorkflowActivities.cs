@@ -1,9 +1,9 @@
-using System.Text.Json;
 using Temporalio.Activities;
 using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Entities;
 using Triggerly.Domain.Interfaces;
 using Triggerly.Shared.Models;
+using Triggerly.Shared.Utils;
 using Triggerly.Infrastructure.Persistence;
 
 namespace Triggerly.Worker.Activities;
@@ -72,7 +72,7 @@ public class WorkflowActivities
 
         if (assigned is null) return null;
 
-        var slaHours = config.TryGetValue("slaHours", out var h) ? Convert.ToInt32(GetStringValue(h) ?? "72") : 72;
+        var slaHours = config.TryGetValue("slaHours", out var h) ? JsonHelpers.GetInt(h, 72) : 72;
         var dueAt = DateTime.UtcNow.AddHours(slaHours);
 
         await _executionRepository.AssignStepAsync(
@@ -83,12 +83,7 @@ public class WorkflowActivities
         return new AssignedUserResult(assigned.UserId, assigned.UserName, assigned.Email);
     }
 
-    private static string? GetStringValue(object? v) => v switch
-    {
-        string s => s,
-        JsonElement je => je.ValueKind == JsonValueKind.String ? je.GetString() : je.ToString(),
-        _ => v?.ToString()
-    };
+    private static string? GetStringValue(object? v) => JsonHelpers.GetString(v);
 
     [Activity]
     public async Task RequestApprovalAsync(Guid executionId, Guid stepId, string stepName)

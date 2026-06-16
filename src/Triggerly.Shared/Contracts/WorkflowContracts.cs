@@ -39,6 +39,7 @@ public record ApprovalSignal(
 );
 
 public record ActionCompleteSignal(
+    Guid StepId,
     string ActorId,
     string ActorName
 );

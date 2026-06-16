@@ -1,6 +1,7 @@
 using MediatR;
 using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Interfaces;
+using Triggerly.Shared.Models;
 
 namespace Triggerly.Application.Commands.Executions;
 
@@ -17,6 +18,7 @@ public class ReassignTaskCommandHandler : IRequestHandler<ReassignTaskCommand>
 {
     private readonly IWorkflowExecutionRepository _repository;
     private readonly IUserRepository _users;
+    private readonly ITenantRoleRepository _roles;
     private readonly IEmailService _email;
     private readonly IEmailTemplateService _templates;
     private readonly IAuditService _audit;
@@ -24,12 +26,14 @@ public class ReassignTaskCommandHandler : IRequestHandler<ReassignTaskCommand>
     public ReassignTaskCommandHandler(
         IWorkflowExecutionRepository repository,
         IUserRepository users,
+        ITenantRoleRepository roles,
         IEmailService email,
         IEmailTemplateService templates,
         IAuditService audit)
     {
         _repository = repository;
         _users = users;
+        _roles = roles;
         _email = email;
         _templates = templates;
         _audit = audit;
@@ -48,6 +52,10 @@ public class ReassignTaskCommandHandler : IRequestHandler<ReassignTaskCommand>
 
         var newUser = await _users.GetByIdAsync(request.NewUserId, cancellationToken)
             ?? throw new KeyNotFoundException($"User {request.NewUserId} not found.");
+
+        var newUserRole = await _roles.GetAsync(request.NewUserId, request.TenantId, cancellationToken);
+        if (newUserRole is null)
+            throw new InvalidOperationException("The specified user is not a member of this tenant.");
 
         await _repository.ReassignStepAsync(
             request.ExecutionId, request.StepId,
