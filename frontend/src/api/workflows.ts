@@ -1,5 +1,13 @@
 import { api } from './client'
-import type { Workflow, WorkflowSummary, WorkflowExecution, WorkflowVersion, PagedResult, WorkflowStatus, FormField } from '../types'
+import type { Workflow, WorkflowSummary, WorkflowExecution, WorkflowVersion, PagedResult, WorkflowStatus, FormField, StepType } from '../types'
+
+export interface AiGeneratedStep {
+  name: string
+  type: StepType
+  order: number
+  config: Record<string, unknown>
+  approverEmail: string | null
+}
 
 export const workflowsApi = {
   list: (params?: { page?: number; pageSize?: number; status?: WorkflowStatus; search?: string }) =>
@@ -33,4 +41,7 @@ export const workflowsApi = {
 
   getVersions: (id: string) =>
     api.get<WorkflowVersion[]>(`/workflows/${id}/versions`).then((r) => r.data),
+
+  generateWithAI: (prompt: string) =>
+    api.post<AiGeneratedStep[]>('/workflows/ai-generate', { prompt }).then((r) => r.data),
 }

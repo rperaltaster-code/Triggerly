@@ -60,6 +60,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IClientServiceRepository, ClientServiceRepository>();
         services.AddScoped<ITenantSettingsRepository, TenantSettingsRepository>();
         services.AddScoped<IAssignmentResolverService, AssignmentResolverService>();
+        services.AddScoped<IAiWorkflowService, AiWorkflowService>();
 
         return services;
     }

@@ -7,8 +7,8 @@ import {
   ReactFlowProvider,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { ArrowLeft, Save, Loader2, CheckCircle } from 'lucide-react'
-import { useWorkflow, useSaveWorkflowForm } from '../hooks/useWorkflows'
+import { ArrowLeft, Save, Loader2, CheckCircle, Sparkles, X } from 'lucide-react'
+import { useWorkflow, useSaveWorkflowForm, useGenerateWorkflowWithAI } from '../hooks/useWorkflows'
 import { workflowsApi } from '../api/workflows'
 import { StepNode, type StepNodeData } from '../components/builder/StepNode'
 import { StepPalette } from '../components/builder/StepPalette'
@@ -35,6 +35,9 @@ function BuilderCanvas() {
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [initialized, setInitialized] = useState(false)
+  const [showAiPanel, setShowAiPanel] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState('')
+  const generateWithAI = useGenerateWorkflowWithAI()
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [rfInstance, setRfInstance] = useState<ReturnType<typeof import('@xyflow/react').useReactFlow> | null>(null)
 
@@ -162,6 +165,30 @@ function BuilderCanvas() {
     [setNodes],
   )
 
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) return
+    const steps = await generateWithAI.mutateAsync(aiPrompt)
+    const newNodes: Node[] = steps
+      .sort((a, b) => a.order - b.order)
+      .map((step, i) => ({
+        id: crypto.randomUUID(),
+        type: 'stepNode',
+        position: { x: 250, y: i * 200 + 50 },
+        data: {
+          name: step.name,
+          type: step.type,
+          config: step.config ?? {},
+          approverEmail: step.approverEmail ?? undefined,
+          onDelete: (nodeId: string) =>
+            setNodes((nds) => nds.filter((n) => n.id !== nodeId)),
+        } satisfies StepNodeData,
+      }))
+    setNodes(newNodes)
+    setEdges([])
+    setShowAiPanel(false)
+    setAiPrompt('')
+  }
+
   const handleSave = async () => {
     if (!id) return
     setSaving(true)
@@ -264,6 +291,15 @@ function BuilderCanvas() {
               : 'Define fields collected when this workflow is triggered'}
           </p>
         )}
+        {activeTab === 'steps' && (
+          <button
+            onClick={() => setShowAiPanel(true)}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
+          >
+            <Sparkles size={14} />
+            <span className="hidden sm:inline">Generate with AI</span>
+          </button>
+        )}
         <button
           onClick={handleSave}
           disabled={saving}
@@ -278,6 +314,64 @@ function BuilderCanvas() {
           )}
         </button>
       </div>
+
+      {/* AI Generation Modal */}
+      {showAiPanel && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+            <div className="flex items-center justify-between p-6 pb-0">
+              <div className="flex items-center gap-2">
+                <Sparkles className="text-purple-600" size={20} />
+                <h2 className="text-lg font-semibold text-gray-900">Generate with AI</h2>
+              </div>
+              <button
+                onClick={() => { setShowAiPanel(false); setAiPrompt('') }}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-500 mb-4">
+                Describe the workflow in plain English. Generated steps will replace the current canvas and can be edited before saving.
+              </p>
+              <textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="e.g. When a GST return is due, notify the client by email, wait for their documents, prepare the return, get manager approval, file with IRD, then send a confirmation."
+                className="w-full h-32 p-3 text-sm border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                autoFocus
+              />
+              {generateWithAI.error && (
+                <p className="text-xs text-red-500 mt-2">
+                  {generateWithAI.error instanceof Error
+                    ? generateWithAI.error.message
+                    : 'Generation failed — please try again.'}
+                </p>
+              )}
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => { setShowAiPanel(false); setAiPrompt('') }}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAiGenerate}
+                  disabled={!aiPrompt.trim() || generateWithAI.isPending}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-60 transition-colors"
+                >
+                  {generateWithAI.isPending ? (
+                    <><Loader2 size={14} className="animate-spin" /> Generating…</>
+                  ) : (
+                    <><Sparkles size={14} /> Generate Steps</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Form builder panel */}
       {activeTab === 'form' && (
