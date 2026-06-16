@@ -18,6 +18,7 @@ import { Team } from './pages/Team'
 import { AcceptInvite } from './pages/AcceptInvite'
 import Clients from './pages/Clients'
 import ClientDetail from './pages/ClientDetail'
+import { MyTasks } from './pages/MyTasks'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -45,6 +46,7 @@ function AppRoutes() {
         <Route path="/executions/:id" element={<ExecutionDetail />} />
         <Route path="/automation" element={<AutomationRules />} />
         <Route path="/approvals" element={<Approvals />} />
+        <Route path="/my-tasks" element={<MyTasks />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/clients/:id" element={<ClientDetail />} />
         <Route path="/team" element={<Team />} />

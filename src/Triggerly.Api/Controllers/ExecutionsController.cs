@@ -6,6 +6,7 @@ using Triggerly.Application.Commands.Executions;
 using Triggerly.Application.Commands.Workflows;
 using Triggerly.Application.Queries.Executions;
 using Triggerly.Shared.Models;
+using Triggerly.Shared.DTOs;
 
 namespace Triggerly.Api.Controllers;
 
@@ -83,7 +84,36 @@ public class ExecutionsController : ControllerBase
             cancellationToken);
         return CreatedAtAction(nameof(GetComments), new { id }, result);
     }
+
+    [HttpGet("my-tasks")]
+    public async Task<IActionResult> GetMyTasks(CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(new GetMyTasksQuery(UserId, TenantId), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("{id:guid}/steps/{stepId:guid}/complete")]
+    public async Task<IActionResult> CompleteStep(
+        Guid id, Guid stepId, CancellationToken cancellationToken = default)
+    {
+        await _mediator.Send(
+            new CompleteActionStepCommand(id, stepId, UserId, UserName, TenantId),
+            cancellationToken);
+        return NoContent();
+    }
+
+    [Authorize(Roles = "Manager")]
+    [HttpPost("{id:guid}/steps/{stepId:guid}/reassign")]
+    public async Task<IActionResult> ReassignStep(
+        Guid id, Guid stepId, [FromBody] ReassignRequest request, CancellationToken cancellationToken = default)
+    {
+        await _mediator.Send(
+            new ReassignTaskCommand(id, stepId, request.NewUserId, UserId, UserName, TenantId),
+            cancellationToken);
+        return NoContent();
+    }
 }
 
 public record RejectRequest(string Reason);
 public record AddCommentRequest(string Content);
+public record ReassignRequest(Guid NewUserId);

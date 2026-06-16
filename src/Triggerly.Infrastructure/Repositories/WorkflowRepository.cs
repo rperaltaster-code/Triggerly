@@ -15,6 +15,16 @@ public class WorkflowRepository : IWorkflowRepository
     public Task<WorkflowDefinition?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         _context.Workflows.FirstOrDefaultAsync(w => w.Id == id, cancellationToken);
 
+    public async Task<Dictionary<Guid, WorkflowDefinition>> GetByIdsAsync(
+        IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var idList = ids.Distinct().ToList();
+        var items = await _context.Workflows
+            .Where(w => idList.Contains(w.Id))
+            .ToListAsync(cancellationToken);
+        return items.ToDictionary(w => w.Id);
+    }
+
     public Task<WorkflowDefinition?> GetByIdWithStepsAsync(Guid id, CancellationToken cancellationToken = default) =>
         _context.Workflows
             .Include(w => w.Steps)

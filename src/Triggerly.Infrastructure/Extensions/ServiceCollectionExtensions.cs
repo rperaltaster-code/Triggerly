@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IServiceTypeRepository, ServiceTypeRepository>();
         services.AddScoped<IClientServiceRepository, ClientServiceRepository>();
         services.AddScoped<ITenantSettingsRepository, TenantSettingsRepository>();
+        services.AddScoped<IAssignmentResolverService, AssignmentResolverService>();
 
         return services;
     }

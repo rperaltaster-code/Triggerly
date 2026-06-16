@@ -153,12 +153,38 @@ export interface ExecutionStep {
   id: string
   stepId: string
   stepName: string
+  stepType: string
   status: ExecutionStatus
   order: number
   output: string | null
   errorMessage: string | null
   startedAt: string | null
   completedAt: string | null
+  assignedUserId: string | null
+  assignedUserName: string | null
+  dueAt: string | null
+}
+
+export interface MyTask {
+  executionId: string
+  stepId: string
+  workflowName: string
+  stepName: string
+  stepType: string
+  stepStatus: ExecutionStatus
+  clientName: string | null
+  serviceTypeName: string | null
+  startedAt: string | null
+  dueAt: string | null
+  tenantId: string
+}
+
+export interface TeamWorkloadMember {
+  userId: string
+  name: string
+  email: string
+  role: UserRole
+  openTaskCount: number
 }
 
 export interface ExecutionComment {

@@ -56,3 +56,35 @@ export function useAddComment(executionId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: executionKeys.detail(executionId) }),
   })
 }
+
+export function useMyTasks() {
+  return useQuery({
+    queryKey: ['my-tasks'],
+    queryFn: executionsApi.getMyTasks,
+    refetchInterval: 10000,
+  })
+}
+
+export function useCompleteActionStep() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ executionId, stepId }: { executionId: string; stepId: string }) =>
+      executionsApi.completeStep(executionId, stepId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-tasks'] })
+      qc.invalidateQueries({ queryKey: executionKeys.all })
+    },
+  })
+}
+
+export function useReassignStep() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ executionId, stepId, newUserId }: { executionId: string; stepId: string; newUserId: string }) =>
+      executionsApi.reassignStep(executionId, stepId, newUserId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: executionKeys.all })
+      qc.invalidateQueries({ queryKey: ['team-workload'] })
+    },
+  })
+}

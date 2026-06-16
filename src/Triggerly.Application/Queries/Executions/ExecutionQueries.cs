@@ -16,3 +16,5 @@ public record ListExecutionsQuery(
 ) : IRequest<PagedResult<WorkflowExecutionDto>>;
 
 public record GetDashboardStatsQuery(string TenantId) : IRequest<DashboardStatsDto>;
+
+public record GetMyTasksQuery(string UserId, string TenantId) : IRequest<List<MyTaskDto>>;

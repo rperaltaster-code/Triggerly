@@ -6,6 +6,7 @@ namespace Triggerly.Domain.Interfaces;
 public interface IWorkflowRepository
 {
     Task<WorkflowDefinition?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Dictionary<Guid, WorkflowDefinition>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
     Task<WorkflowDefinition?> GetByIdWithStepsAsync(Guid id, CancellationToken cancellationToken = default);
     Task<(IReadOnlyList<WorkflowDefinition> Items, int TotalCount)> GetPagedAsync(
         string tenantId, int page, int pageSize, WorkflowStatus? status = null, string? search = null,

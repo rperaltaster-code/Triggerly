@@ -1,8 +1,20 @@
 import { useEffect, useState } from 'react'
-import { X, Tag } from 'lucide-react'
+import { X, Tag, UserCheck } from 'lucide-react'
 import type { Node } from '@xyflow/react'
 import type { StepNodeData } from './StepNode'
-import type { FormField } from '../../types'
+import type { FormField, UserRole } from '../../types'
+import { useTeam } from '../../hooks/useTeam'
+
+type AssignmentMode = 'specific' | 'role-any' | 'role-least-loaded' | 'role-round-robin'
+
+const ASSIGNMENT_MODES: { value: AssignmentMode; label: string }[] = [
+  { value: 'specific', label: 'Specific user' },
+  { value: 'role-any', label: 'Role — any available' },
+  { value: 'role-least-loaded', label: 'Role — least loaded' },
+  { value: 'role-round-robin', label: 'Role — round robin' },
+]
+
+const ROLES: UserRole[] = ['Preparer', 'Reviewer', 'Manager']
 
 interface StepConfigPanelProps {
   node: Node | null
@@ -25,6 +37,7 @@ export function StepConfigPanel({ node, onClose, onUpdate, formFields = [] }: St
   const [name, setName] = useState('')
   const [config, setConfig] = useState<Record<string, unknown>>({})
   const [approverEmail, setApproverEmail] = useState('')
+  const { data: teamMembers = [] } = useTeam()
 
   useEffect(() => {
     if (nodeData) {
@@ -125,10 +138,79 @@ export function StepConfigPanel({ node, onClose, onUpdate, formFields = [] }: St
           <span className="text-sm text-gray-700">{nodeData.type}</span>
         </div>
 
+        {(nodeData.type === 'Action' || nodeData.type === 'Approval') && (
+          <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3 space-y-3">
+            <div className="flex items-center gap-1.5">
+              <UserCheck size={12} className="text-indigo-500" />
+              <span className="text-xs font-semibold text-indigo-600">Assignment</span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Assign to</label>
+              <select
+                value={String(config.assignmentMode ?? '')}
+                onChange={(e) => setConfigField('assignmentMode', e.target.value || undefined)}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              >
+                <option value="">No assignment</option>
+                {ASSIGNMENT_MODES.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {config.assignmentMode === 'specific' && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Staff member</label>
+                <select
+                  value={String(config.assignedUserId ?? '')}
+                  onChange={(e) => {
+                    const member = teamMembers.find((m) => m.userId === e.target.value)
+                    setConfigField('assignedUserId', e.target.value)
+                    setConfigField('assignedUserName', member?.name ?? '')
+                  }}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                >
+                  <option value="">Select…</option>
+                  {teamMembers.map((m) => (
+                    <option key={m.userId} value={m.userId}>{m.name} ({m.role})</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {!!config.assignmentMode && config.assignmentMode !== 'specific' && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+                <select
+                  value={String(config.assignedRole ?? 'Preparer')}
+                  onChange={(e) => setConfigField('assignedRole', e.target.value)}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                >
+                  {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+            )}
+
+            {!!config.assignmentMode && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">SLA (hours)</label>
+                <input
+                  type="number"
+                  value={strVal('slaHours', '72')}
+                  onChange={(e) => setConfigField('slaHours', Number(e.target.value))}
+                  min={1}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {nodeData.type === 'Approval' && (
           <>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Approver Email</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Approver Email <span className="text-gray-400 font-normal">(fallback if no assignment)</span></label>
               <input
                 type="email"
                 value={approverEmail}
@@ -329,7 +411,7 @@ export function StepConfigPanel({ node, onClose, onUpdate, formFields = [] }: St
           </>
         )}
 
-        {nodeData.type === 'Action' && (
+        {nodeData.type === 'Action' && !config.assignmentMode && (
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
             <textarea

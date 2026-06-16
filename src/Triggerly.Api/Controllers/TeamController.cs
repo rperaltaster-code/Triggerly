@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Triggerly.Application.Commands.Team;
 using Triggerly.Application.Queries.Team;
+using Triggerly.Domain.Interfaces;
 using Triggerly.Shared.Models;
 
 namespace Triggerly.Api.Controllers;
@@ -69,6 +70,14 @@ public class TeamController : ControllerBase
     {
         await _mediator.Send(new RevokeInviteCommand(id, TenantId), cancellationToken);
         return NoContent();
+    }
+
+    [Authorize(Roles = "Manager")]
+    [HttpGet("workload")]
+    public async Task<IActionResult> GetWorkload(CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(new GetTeamWorkloadQuery(TenantId), cancellationToken);
+        return Ok(result);
     }
 }
 

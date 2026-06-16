@@ -42,8 +42,9 @@ public class GetExecutionByIdQueryHandler : IRequestHandler<GetExecutionByIdQuer
             execution.CompletedAt,
             execution.SlaBreachedAt,
             execution.Steps.Select(s => new ExecutionStepDto(
-                s.Id, s.StepId, s.StepName, s.Status, s.Order,
-                s.Output, s.ErrorMessage, s.StartedAt, s.CompletedAt)).ToList(),
+                s.Id, s.StepId, s.StepName, s.StepType, s.Status, s.Order,
+                s.Output, s.ErrorMessage, s.StartedAt, s.CompletedAt,
+                s.AssignedUserId, s.AssignedUserName, s.DueAt)).ToList(),
             execution.Comments.Select(c => new ExecutionCommentDto(
                 c.Id, c.ExecutionId, c.AuthorId, c.AuthorName, c.Content, c.CreatedAt)).ToList(),
             execution.WorkflowVersionNumber);
@@ -81,6 +82,40 @@ public class ListExecutionsQueryHandler : IRequestHandler<ListExecutionsQuery, P
         }
 
         return new PagedResult<WorkflowExecutionDto>(dtos, totalCount, request.Page, request.PageSize);
+    }
+}
+
+public class GetMyTasksQueryHandler : IRequestHandler<GetMyTasksQuery, List<MyTaskDto>>
+{
+    private readonly IWorkflowExecutionRepository _repository;
+    private readonly IWorkflowRepository _workflowRepository;
+
+    public GetMyTasksQueryHandler(IWorkflowExecutionRepository repository, IWorkflowRepository workflowRepository)
+    {
+        _repository = repository;
+        _workflowRepository = workflowRepository;
+    }
+
+    public async Task<List<MyTaskDto>> Handle(GetMyTasksQuery request, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(request.UserId, out var userId)) return [];
+
+        var pairs = await _repository.GetActiveAssignedStepsAsync(userId, request.TenantId, cancellationToken);
+        if (pairs.Count == 0) return [];
+
+        var workflowIds = pairs.Select(p => p.Execution.WorkflowId).Distinct();
+        var workflows = await _workflowRepository.GetByIdsAsync(workflowIds, cancellationToken);
+
+        return pairs.Select(p =>
+        {
+            var (step, execution) = p;
+            var workflowName = workflows.TryGetValue(execution.WorkflowId, out var wf) ? wf.Name : string.Empty;
+            var clientName = execution.InputData.TryGetValue("client.name", out var cn) ? cn?.ToString() : null;
+            var serviceName = execution.InputData.TryGetValue("service.name", out var sn) ? sn?.ToString() : null;
+            return new MyTaskDto(
+                execution.Id, step.StepId, workflowName, step.StepName, step.StepType,
+                step.Status, clientName, serviceName, step.StartedAt, step.DueAt, execution.TenantId);
+        }).ToList();
     }
 }
 

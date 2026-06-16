@@ -26,4 +26,8 @@ public interface IWorkflowExecutionRepository
     Task<int> CountByStatusAsync(string tenantId, ExecutionStatus status, CancellationToken cancellationToken = default);
     Task<int> CountCompletedTodayAsync(string tenantId, CancellationToken cancellationToken = default);
     Task<List<(string Date, int Completed, int Failed)>> GetRecentTrendAsync(string tenantId, int days, CancellationToken cancellationToken = default);
+    Task<List<(ExecutionStep Step, WorkflowExecution Execution)>> GetActiveAssignedStepsAsync(Guid userId, string tenantId, CancellationToken cancellationToken = default);
+    Task<Dictionary<Guid, int>> GetOpenTaskCountsByUserAsync(string tenantId, CancellationToken cancellationToken = default);
+    Task AssignStepAsync(Guid executionId, Guid stepId, Guid userId, string userName, DateTime? dueAt, CancellationToken cancellationToken = default);
+    Task ReassignStepAsync(Guid executionId, Guid stepId, Guid userId, string userName, CancellationToken cancellationToken = default);
 }

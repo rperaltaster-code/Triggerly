@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Users, UserPlus, Trash2, Mail, Clock } from 'lucide-react'
-import { useTeam, useUpdateRole, usePendingInvites, useInviteMember, useRevokeInvite } from '../hooks/useTeam'
+import { Users, UserPlus, Trash2, Mail, Clock, BarChart2 } from 'lucide-react'
+import { useTeam, useUpdateRole, usePendingInvites, useInviteMember, useRevokeInvite, useTeamWorkload } from '../hooks/useTeam'
 import { useRole } from '../hooks/useRole'
 import { useAuth } from '../contexts/AuthContext'
 import { formatDistanceToNow } from 'date-fns'
@@ -103,9 +103,12 @@ export function Team() {
   const { isManager } = useRole()
   const { data: members, isLoading } = useTeam()
   const { data: invites } = usePendingInvites()
+  const { data: workload } = useTeamWorkload()
   const updateRole = useUpdateRole()
   const revokeInvite = useRevokeInvite()
   const [showInviteModal, setShowInviteModal] = useState(false)
+
+  const maxTasks = Math.max(1, ...(workload?.map((m) => m.openTaskCount) ?? [0]))
 
   return (
     <>
@@ -237,6 +240,41 @@ export function Team() {
               ))}
             </ul>
           )}
+        </div>
+      )}
+      {isManager && workload && workload.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center gap-2">
+            <BarChart2 size={17} className="text-gray-400" />
+            <h2 className="font-semibold text-gray-800">Team Workload</h2>
+            <span className="text-xs text-gray-400 ml-1">open tasks per member</span>
+          </div>
+          <ul className="divide-y divide-gray-100">
+            {workload.map((member) => (
+              <li key={member.userId} className="flex items-center gap-4 px-6 py-3.5">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${
+                  member.role === 'Manager' ? 'bg-blue-500' : member.role === 'Reviewer' ? 'bg-teal-500' : 'bg-gray-400'
+                }`}>
+                  {member.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
+                </div>
+                <div className="w-32 min-w-0 flex-shrink-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{member.name}</p>
+                  <p className="text-xs text-gray-400">{member.role}</p>
+                </div>
+                <div className="flex-1 flex items-center gap-3">
+                  <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="h-2 rounded-full bg-blue-500 transition-all"
+                      style={{ width: `${(member.openTaskCount / maxTasks) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 w-16 text-right flex-shrink-0">
+                    {member.openTaskCount} task{member.openTaskCount !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
