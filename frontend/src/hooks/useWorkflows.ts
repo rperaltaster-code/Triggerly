@@ -82,8 +82,8 @@ export function useSaveWorkflowForm() {
   })
 }
 
-export function useGenerateWorkflowWithAI() {
+export function useAiGenerateWorkflow() {
   return useMutation({
-    mutationFn: (prompt: string) => workflowsApi.generateWithAI(prompt),
+    mutationFn: workflowsApi.aiGenerate,
   })
 }
