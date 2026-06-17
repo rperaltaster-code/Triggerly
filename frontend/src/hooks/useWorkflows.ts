@@ -81,3 +81,9 @@ export function useSaveWorkflowForm() {
     onSuccess: (_data, { id }) => qc.invalidateQueries({ queryKey: workflowKeys.detail(id) }),
   })
 }
+
+export function useGenerateWorkflowWithAI() {
+  return useMutation({
+    mutationFn: (prompt: string) => workflowsApi.generateWithAI(prompt),
+  })
+}

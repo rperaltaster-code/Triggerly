@@ -116,6 +116,14 @@ public class WorkflowsController : ControllerBase
     }
 
     [Authorize(Roles = "Manager")]
+    [HttpPost("ai-generate")]
+    public async Task<IActionResult> AiGenerate([FromBody] AiGenerateRequest request, CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(new GenerateWorkflowWithAiCommand(request.Prompt), cancellationToken);
+        return Ok(result);
+    }
+
+    [Authorize(Roles = "Manager")]
     [HttpPut("{id:guid}/steps")]
     public async Task<IActionResult> SaveSteps(
         Guid id,
@@ -132,6 +140,7 @@ public class WorkflowsController : ControllerBase
     }
 }
 
+public record AiGenerateRequest(string Prompt);
 public record CreateWorkflowRequest(string Name, string? Description);
 public record SaveFormRequest(List<FormField>? Fields);
 public record TriggerWorkflowRequest(Dictionary<string, object>? InputData, Guid? ClientId = null, Guid? ClientServiceId = null);
