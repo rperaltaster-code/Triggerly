@@ -8,7 +8,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { ArrowLeft, Save, Loader2, CheckCircle, Sparkles, X } from 'lucide-react'
-import { useWorkflow, useSaveWorkflowForm, useGenerateWorkflowWithAI } from '../hooks/useWorkflows'
+import { useWorkflow, useSaveWorkflowForm, useAiGenerateWorkflow } from '../hooks/useWorkflows'
 import { workflowsApi } from '../api/workflows'
 import { StepNode, type StepNodeData } from '../components/builder/StepNode'
 import { StepPalette } from '../components/builder/StepPalette'
@@ -37,7 +37,7 @@ function BuilderCanvas() {
   const [initialized, setInitialized] = useState(false)
   const [showAiPanel, setShowAiPanel] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
-  const generateWithAI = useGenerateWorkflowWithAI()
+  const generateWithAI = useAiGenerateWorkflow()
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [rfInstance, setRfInstance] = useState<ReturnType<typeof import('@xyflow/react').useReactFlow> | null>(null)
 
@@ -167,8 +167,8 @@ function BuilderCanvas() {
 
   const handleAiGenerate = async () => {
     if (!aiPrompt.trim()) return
-    const steps = await generateWithAI.mutateAsync(aiPrompt)
-    const newNodes: Node[] = steps
+    const result = await generateWithAI.mutateAsync({ prompt: aiPrompt })
+    const newNodes: Node[] = result.steps
       .sort((a, b) => a.order - b.order)
       .map((step, i) => ({
         id: crypto.randomUUID(),

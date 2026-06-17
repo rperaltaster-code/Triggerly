@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Triggerly.Application.Commands.Workflows;
+using Triggerly.Application.Interfaces;
 using Triggerly.Application.Queries.Workflows;
 using Triggerly.Shared.Models;
 
@@ -117,9 +118,9 @@ public class WorkflowsController : ControllerBase
 
     [Authorize(Roles = "Manager")]
     [HttpPost("ai-generate")]
-    public async Task<IActionResult> AiGenerate([FromBody] AiGenerateRequest request, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> AiGenerate([FromBody] AiGenerateWorkflowRequest request, CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GenerateWorkflowWithAiCommand(request.Prompt), cancellationToken);
+        var result = await _mediator.Send(new AiGenerateWorkflowCommand(request.Prompt, TenantId), cancellationToken);
         return Ok(result);
     }
 
@@ -140,8 +141,8 @@ public class WorkflowsController : ControllerBase
     }
 }
 
-public record AiGenerateRequest(string Prompt);
 public record CreateWorkflowRequest(string Name, string? Description);
+public record AiGenerateWorkflowRequest(string Prompt);
 public record SaveFormRequest(List<FormField>? Fields);
 public record TriggerWorkflowRequest(Dictionary<string, object>? InputData, Guid? ClientId = null, Guid? ClientServiceId = null);
 

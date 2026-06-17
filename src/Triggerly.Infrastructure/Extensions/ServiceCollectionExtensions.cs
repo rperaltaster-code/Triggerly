@@ -1,3 +1,4 @@
+using Anthropic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,7 +61,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IClientServiceRepository, ClientServiceRepository>();
         services.AddScoped<ITenantSettingsRepository, TenantSettingsRepository>();
         services.AddScoped<IAssignmentResolverService, AssignmentResolverService>();
-        services.AddScoped<IAiWorkflowService, AiWorkflowService>();
+
+        var anthropicKey = configuration["Anthropic:ApiKey"]
+            ?? Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")
+            ?? string.Empty;
+        services.AddSingleton(_ => new AnthropicClient { ApiKey = anthropicKey });
+        services.AddScoped<IAiWorkflowService, AnthropicAiWorkflowService>();
 
         return services;
     }

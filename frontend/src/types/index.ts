@@ -245,3 +245,16 @@ export interface DashboardStats {
   completedToday: number
   recentTrend: Array<{ date: string; completed: number; failed: number }>
 }
+
+export interface AiGeneratedStep {
+  name: string
+  type: StepType
+  order: number
+  config: Record<string, unknown>
+  approverEmail?: string | null
+}
+
+export interface AiWorkflowSuggestion {
+  suggestedName: string | null
+  steps: AiGeneratedStep[]
+}
