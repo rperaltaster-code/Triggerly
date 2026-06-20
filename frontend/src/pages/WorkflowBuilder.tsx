@@ -55,11 +55,14 @@ function BuilderCanvas() {
       .map((step, i) => ({
         id: step.id,
         type: 'stepNode',
-        position: { x: 250, y: i * 200 + 50 },
+        position: {
+          x: typeof step.config.__x === 'number' ? step.config.__x : 250,
+          y: typeof step.config.__y === 'number' ? step.config.__y : i * 200 + 50,
+        },
         data: {
           name: step.name,
           type: step.type,
-          config: step.config,
+          config: Object.fromEntries(Object.entries(step.config).filter(([k]) => k !== '__x' && k !== '__y')),
           approverEmail: undefined as string | undefined,
           onDelete: (nodeId: string) =>
             setNodes((nds) => nds.filter((n) => n.id !== nodeId)),
@@ -201,7 +204,7 @@ function BuilderCanvas() {
         const nodeIdToOrder = Object.fromEntries(sortedNodes.map((n, i) => [n.id, i + 1]))
         const steps = sortedNodes.map((node, i) => {
           const data = node.data as StepNodeData
-          const config = { ...(data.config ?? {}) }
+          const config: Record<string, unknown> = { ...(data.config ?? {}), __x: node.position.x, __y: node.position.y }
           if (data.type === 'Condition') {
             const trueEdge = edges.find((e) => e.source === node.id && e.sourceHandle === 'true')
             const falseEdge = edges.find((e) => e.source === node.id && e.sourceHandle === 'false')
