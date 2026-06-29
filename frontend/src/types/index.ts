@@ -147,6 +147,7 @@ export interface AutomationRule {
   lastTriggeredAt: string | null
   createdAt: string
   webhookToken: string | null
+  nextRunAt: string | null
 }
 
 export interface ExecutionStep {

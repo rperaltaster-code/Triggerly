@@ -26,7 +26,7 @@ public class GetAutomationRuleByIdQueryHandler : IRequestHandler<GetAutomationRu
             rule.Id, rule.Name, rule.Description, rule.TriggerType,
             rule.TriggerConfig, rule.WorkflowId, workflow?.Name ?? string.Empty,
             rule.IsEnabled, rule.TenantId, rule.ExecutionCount,
-            rule.LastTriggeredAt, rule.CreatedAt, rule.WebhookToken);
+            rule.LastTriggeredAt, rule.CreatedAt, rule.WebhookToken, rule.NextRunAt);
     }
 }
 
@@ -54,7 +54,7 @@ public class ListAutomationRulesQueryHandler : IRequestHandler<ListAutomationRul
                 rule.Id, rule.Name, rule.Description, rule.TriggerType,
                 rule.TriggerConfig, rule.WorkflowId, workflow?.Name ?? string.Empty,
                 rule.IsEnabled, rule.TenantId, rule.ExecutionCount,
-                rule.LastTriggeredAt, rule.CreatedAt, rule.WebhookToken));
+                rule.LastTriggeredAt, rule.CreatedAt, rule.WebhookToken, rule.NextRunAt));
         }
 
         return new PagedResult<AutomationRuleDto>(dtos, totalCount, request.Page, request.PageSize);

@@ -50,9 +50,16 @@ public class SchedulerHostedService : BackgroundService
                 var cron = ParseCron(rule.TriggerConfig);
                 if (cron is null) continue;
 
-                var from = DateTime.SpecifyKind(rule.LastTriggeredAt ?? rule.CreatedAt, DateTimeKind.Utc);
-                var next = cron.GetNextOccurrence(from, TimeZoneInfo.Utc);
-                if (next is null || next > now) continue;
+                // Use stored NextRunAt when available; fall back to computing from last trigger
+                DateTime? nextRun = rule.NextRunAt;
+                if (nextRun is null)
+                {
+                    var from = DateTime.SpecifyKind(rule.LastTriggeredAt ?? rule.CreatedAt, DateTimeKind.Utc);
+                    nextRun = cron.GetNextOccurrence(from, TimeZoneInfo.Utc);
+                    await ruleRepo.UpdateNextRunAtAsync(rule.Id, nextRun, cancellationToken);
+                }
+
+                if (nextRun > now) continue;
 
                 _logger.LogInformation("Triggering scheduled rule {RuleId} ({Name})", rule.Id, rule.Name);
 
@@ -64,6 +71,7 @@ public class SchedulerHostedService : BackgroundService
                     null), cancellationToken);
 
                 await ruleRepo.RecordTriggerAsync(rule.Id, cancellationToken);
+                await ruleRepo.UpdateNextRunAtAsync(rule.Id, cron.GetNextOccurrence(now, TimeZoneInfo.Utc), cancellationToken);
             }
             catch (Exception ex)
             {
@@ -72,7 +80,7 @@ public class SchedulerHostedService : BackgroundService
         }
     }
 
-    private CronExpression? ParseCron(string triggerConfig)
+    private static CronExpression? ParseCron(string triggerConfig)
     {
         try
         {

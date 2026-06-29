@@ -14,6 +14,7 @@ public class AutomationRule
     public string TenantId { get; private set; } = string.Empty;
     public int ExecutionCount { get; private set; }
     public DateTime? LastTriggeredAt { get; private set; }
+    public DateTime? NextRunAt { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public string? WebhookToken { get; private set; }
@@ -84,6 +85,12 @@ public class AutomationRule
     {
         ExecutionCount++;
         LastTriggeredAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetNextRunAt(DateTime? nextRunAt)
+    {
+        NextRunAt = nextRunAt;
         UpdatedAt = DateTime.UtcNow;
     }
 }
