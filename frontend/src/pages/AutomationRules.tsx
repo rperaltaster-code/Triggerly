@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Plus, Trash2, Zap, Copy, Check } from 'lucide-react'
+import { Plus, Trash2, Zap, Copy, Check, Clock } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { automationRulesApi } from '../api/automationRules'
 import { useRole } from '../hooks/useRole'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, format } from 'date-fns'
 import { NewRuleModal } from '../components/automationRules/NewRuleModal'
 
 function WebhookUrl({ token }: { token: string }) {
@@ -21,6 +21,19 @@ function WebhookUrl({ token }: { token: string }) {
         {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
       </button>
     </div>
+  )
+}
+
+function NextRunBadge({ nextRunAt }: { nextRunAt: string | null }) {
+  if (!nextRunAt) return null
+  const date = new Date(nextRunAt)
+  const isPast = date < new Date()
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${isPast ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
+      <Clock size={11} />
+      Next: {formatDistanceToNow(date, { addSuffix: true })}
+      <span className="text-gray-400 font-normal">({format(date, 'MMM d, HH:mm')})</span>
+    </span>
   )
 }
 
@@ -83,7 +96,7 @@ export function AutomationRules() {
                       </span>
                     </div>
                     {rule.description && <p className="text-sm text-gray-500 mt-0.5">{rule.description}</p>}
-                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                    <div className="flex items-center flex-wrap gap-4 mt-2 text-xs text-gray-400">
                       <span>Trigger: <span className="font-medium text-gray-600">{rule.triggerType}</span></span>
                       <span>Workflow: <span className="font-medium text-gray-600">{rule.workflowName}</span></span>
                       <span>Runs: <span className="font-medium text-gray-600">{rule.executionCount}</span></span>
@@ -91,6 +104,11 @@ export function AutomationRules() {
                         <span>Last: <span className="font-medium text-gray-600">{formatDistanceToNow(new Date(rule.lastTriggeredAt), { addSuffix: true })}</span></span>
                       )}
                     </div>
+                    {rule.triggerType === 'Schedule' && rule.isEnabled && (
+                      <div className="mt-2">
+                        <NextRunBadge nextRunAt={rule.nextRunAt} />
+                      </div>
+                    )}
                     {rule.triggerType === 'Webhook' && rule.webhookToken && (
                       <WebhookUrl token={rule.webhookToken} />
                     )}

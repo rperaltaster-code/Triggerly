@@ -15,5 +15,6 @@ public record AutomationRuleDto(
     int ExecutionCount,
     DateTime? LastTriggeredAt,
     DateTime CreatedAt,
-    string? WebhookToken = null
+    string? WebhookToken = null,
+    DateTime? NextRunAt = null
 );

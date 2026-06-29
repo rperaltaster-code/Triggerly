@@ -81,4 +81,11 @@ public class AutomationRuleRepository : IAutomationRuleRepository
                 .SetProperty(r => r.LastTriggeredAt, DateTime.UtcNow)
                 .SetProperty(r => r.ExecutionCount, r => r.ExecutionCount + 1)
                 .SetProperty(r => r.UpdatedAt, DateTime.UtcNow), cancellationToken);
+
+    public Task UpdateNextRunAtAsync(Guid id, DateTime? nextRunAt, CancellationToken cancellationToken = default) =>
+        _context.AutomationRules
+            .Where(r => r.Id == id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(r => r.NextRunAt, nextRunAt)
+                .SetProperty(r => r.UpdatedAt, DateTime.UtcNow), cancellationToken);
 }

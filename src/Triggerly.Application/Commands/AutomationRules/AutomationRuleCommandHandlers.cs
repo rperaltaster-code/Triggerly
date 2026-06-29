@@ -1,8 +1,11 @@
+using Cronos;
 using MediatR;
+using System.Text.Json;
 using Triggerly.Application.Interfaces;
 using Triggerly.Domain.Entities;
 using Triggerly.Domain.Interfaces;
 using Triggerly.Shared.DTOs;
+using Triggerly.Shared.Models;
 
 namespace Triggerly.Application.Commands.AutomationRules;
 
@@ -41,6 +44,9 @@ public class CreateAutomationRuleCommandHandler : IRequestHandler<CreateAutomati
             request.WorkflowId,
             request.TenantId);
 
+        if (request.TriggerType == TriggerType.Schedule)
+            rule.SetNextRunAt(CronHelper.ComputeNextRun(request.TriggerConfig));
+
         await _repository.AddAsync(rule, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -52,7 +58,7 @@ public class CreateAutomationRuleCommandHandler : IRequestHandler<CreateAutomati
             rule.Id, rule.Name, rule.Description, rule.TriggerType,
             rule.TriggerConfig, rule.WorkflowId, workflow.Name,
             rule.IsEnabled, rule.TenantId, rule.ExecutionCount,
-            rule.LastTriggeredAt, rule.CreatedAt, rule.WebhookToken);
+            rule.LastTriggeredAt, rule.CreatedAt, rule.WebhookToken, rule.NextRunAt);
     }
 }
 
@@ -79,12 +85,20 @@ public class UpdateAutomationRuleCommandHandler : IRequestHandler<UpdateAutomati
 
         await _repository.UpdateDetailsAsync(request.Id, request.Name, request.Description, request.TriggerConfig, cancellationToken);
 
+        // Recompute next run if the cron config changed and rule is a schedule type
+        DateTime? nextRunAt = rule.NextRunAt;
+        if (rule.TriggerType == TriggerType.Schedule && rule.IsEnabled)
+        {
+            nextRunAt = CronHelper.ComputeNextRun(request.TriggerConfig);
+            await _repository.UpdateNextRunAtAsync(request.Id, nextRunAt, cancellationToken);
+        }
+
         var workflow = await _workflowRepository.GetByIdAsync(rule.WorkflowId, cancellationToken);
         return new AutomationRuleDto(
             rule.Id, request.Name, request.Description, rule.TriggerType,
             request.TriggerConfig, rule.WorkflowId, workflow?.Name ?? string.Empty,
             rule.IsEnabled, rule.TenantId, rule.ExecutionCount,
-            rule.LastTriggeredAt, rule.CreatedAt, rule.WebhookToken);
+            rule.LastTriggeredAt, rule.CreatedAt, rule.WebhookToken, nextRunAt);
     }
 }
 
@@ -139,9 +153,33 @@ public class ToggleAutomationRuleCommandHandler : IRequestHandler<ToggleAutomati
 
         await _repository.ToggleAsync(request.Id, request.Enable, cancellationToken);
 
+        if (rule.TriggerType == TriggerType.Schedule)
+        {
+            var nextRunAt = request.Enable ? CronHelper.ComputeNextRun(rule.TriggerConfig) : null;
+            await _repository.UpdateNextRunAtAsync(request.Id, nextRunAt, cancellationToken);
+        }
+
         await _audit.LogAsync(request.TenantId, request.UserId, request.UserName,
             request.Enable ? "AutomationRuleEnabled" : "AutomationRuleDisabled",
             "AutomationRule", rule.Id.ToString(), rule.Name,
             ct: cancellationToken);
     }
 }
+
+internal static class CronHelper
+{
+    internal static DateTime? ComputeNextRun(string triggerConfig)
+    {
+        try
+        {
+            var doc = JsonDocument.Parse(triggerConfig);
+            if (!doc.RootElement.TryGetProperty("cron", out var cronProp)) return null;
+            var expr = cronProp.GetString();
+            if (string.IsNullOrWhiteSpace(expr)) return null;
+            var cron = CronExpression.Parse(expr);
+            return cron.GetNextOccurrence(DateTime.UtcNow, TimeZoneInfo.Utc);
+        }
+        catch { return null; }
+    }
+}
+
