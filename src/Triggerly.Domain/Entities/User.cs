@@ -27,6 +27,23 @@ public class User
         };
     }
 
+    public static User CreateForSso(string name, string email, string tenantId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tenantId);
+
+        return new User
+        {
+            Id = Guid.NewGuid(),
+            Name = name.Trim(),
+            Email = email.Trim().ToLowerInvariant(),
+            PasswordHash = string.Empty,
+            TenantId = tenantId,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
     public static User CreateForTenant(string name, string email, string passwordHash, string tenantId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);

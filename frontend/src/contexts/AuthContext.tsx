@@ -10,6 +10,7 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
+  loginWithToken: (token: string) => void
   register: (name: string, email: string, password: string) => Promise<void>
   logout: () => void
 }
@@ -45,10 +46,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     persist({ token, user })
   }, [persist])
 
+  const loginWithToken = useCallback((token: string) => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+      const user: AuthUser = {
+        id: payload.sub,
+        name: payload.name ?? payload.email,
+        email: payload.email,
+        tenantId: payload.tenantId,
+        role: payload.role,
+      }
+      persist({ token, user })
+    } catch {
+      throw new Error('Invalid SSO token.')
+    }
+  }, [persist])
+
   const logout = useCallback(() => persist({ user: null, token: null }), [persist])
 
   return (
-    <AuthContext.Provider value={{ ...state, isAuthenticated: !!state.token, login, register, logout }}>
+    <AuthContext.Provider value={{ ...state, isAuthenticated: !!state.token, login, loginWithToken, register, logout }}>
       {children}
     </AuthContext.Provider>
   )
