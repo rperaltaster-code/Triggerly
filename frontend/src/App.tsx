@@ -19,6 +19,7 @@ import { AcceptInvite } from './pages/AcceptInvite'
 import Clients from './pages/Clients'
 import ClientDetail from './pages/ClientDetail'
 import { MyTasks } from './pages/MyTasks'
+import { SsoComplete } from './pages/SsoComplete'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -31,6 +32,7 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
+      <Route path="/sso/complete" element={<SsoComplete />} />
 
       {/* Builder is full-screen — outside AppLayout */}
       <Route path="/workflows/:id/builder" element={

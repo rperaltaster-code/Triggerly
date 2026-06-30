@@ -60,7 +60,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IServiceTypeRepository, ServiceTypeRepository>();
         services.AddScoped<IClientServiceRepository, ClientServiceRepository>();
         services.AddScoped<ITenantSettingsRepository, TenantSettingsRepository>();
+        services.AddScoped<ITenantSsoConfigRepository, TenantSsoConfigRepository>();
         services.AddScoped<IAssignmentResolverService, AssignmentResolverService>();
+        services.AddScoped<IOidcService, OidcService>();
 
         var anthropicKey = configuration["Anthropic:ApiKey"]
             ?? Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")

@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, RotateCcw, Save, Plus, Pencil, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, RotateCcw, Save, Plus, Pencil, Trash2, Shield, Copy, Check } from 'lucide-react'
 import { useTeam, useUpdateRole } from '../hooks/useTeam'
 import { useRole } from '../hooks/useRole'
 import { useAuth } from '../contexts/AuthContext'
 import { useEmailTemplates, useUpsertEmailTemplate, useResetEmailTemplate } from '../hooks/useEmailTemplates'
 import { useServiceTypes, useCreateServiceType, useUpdateServiceType, useDeleteServiceType } from '../hooks/useClients'
 import { useWorkflows } from '../hooks/useWorkflows'
+import { useSsoConfig, useSavesSsoConfig, useDeleteSsoConfig, useToggleSsoConfig } from '../hooks/useSso'
 import { formatDistanceToNow } from 'date-fns'
 import type { UserRole, EmailTemplate, ServiceType, FilingPeriod } from '../types'
 import type { SaveServiceTypePayload } from '../api/clients'
@@ -399,6 +400,8 @@ export function Settings() {
         </div>
       )}
 
+      {isManager && <SsoConfigSection />}
+
       {showNewServiceType && (
         <ServiceTypeModal
           onSave={handleCreateST}
@@ -423,4 +426,134 @@ function EditServiceTypeWrapper({ st, onClose }: { st: ServiceType; onClose: () 
     onClose()
   }
   return <ServiceTypeModal initial={st} onSave={handleSave} onClose={onClose} saving={update.isPending} />
+}
+
+function SsoConfigSection() {
+  const { user } = useAuth()
+  const { data: config, isLoading } = useSsoConfig()
+  const save = useSavesSsoConfig()
+  const del = useDeleteSsoConfig()
+  const toggle = useToggleSsoConfig()
+
+  const [editing, setEditing] = useState(false)
+  const [clientId, setClientId] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
+  const [directoryTenantId, setDirectoryTenantId] = useState('')
+  const [groupClaimName, setGroupClaimName] = useState('groups')
+  const [groupRoleMappings, setGroupRoleMappings] = useState('{}')
+  const [copied, setCopied] = useState(false)
+
+  const openEdit = () => {
+    setClientId(config?.clientId ?? '')
+    setClientSecret('')
+    setDirectoryTenantId(config?.directoryTenantId ?? '')
+    setGroupClaimName(config?.groupClaimName ?? 'groups')
+    setGroupRoleMappings(config?.groupRoleMappings ?? '{}')
+    setEditing(true)
+  }
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await save.mutateAsync({ clientId, clientSecret, directoryTenantId, groupClaimName, groupRoleMappings })
+    setEditing(false)
+  }
+
+  const ssoLoginUrl = `${window.location.origin}/login?sso=${user?.tenantId}`
+  const copyUrl = () => {
+    navigator.clipboard.writeText(ssoLoginUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Shield size={16} className="text-gray-500" />
+          <h2 className="font-semibold text-gray-800">SSO / Active Directory</h2>
+        </div>
+        {!editing && (
+          <button onClick={openEdit} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            {config ? 'Edit' : 'Configure'}
+          </button>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="px-6 py-6 flex justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" /></div>
+      ) : editing ? (
+        <form onSubmit={handleSave} className="px-6 py-5 space-y-4">
+          <p className="text-sm text-gray-500">Configure Microsoft Entra ID (Azure AD) for your team. Register an app in Azure with redirect URI: <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">http://localhost:5000/api/sso/callback</code></p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Client ID (App ID) *</label>
+              <input value={clientId} onChange={e => setClientId(e.target.value)} required placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Directory (Tenant) ID *</label>
+              <input value={directoryTenantId} onChange={e => setDirectoryTenantId(e.target.value)} required placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">Client Secret {config ? '(leave blank to keep existing)' : '*'}</label>
+            <input value={clientSecret} onChange={e => setClientSecret(e.target.value)} required={!config} type="password" placeholder="••••••••••••••••"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Group claim name</label>
+              <input value={groupClaimName} onChange={e => setGroupClaimName(e.target.value)} placeholder="groups"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Group → Role mappings (JSON)</label>
+              <input value={groupRoleMappings} onChange={e => setGroupRoleMappings(e.target.value)} placeholder='{"group-guid": "Manager"}'
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button type="submit" disabled={save.isPending}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              <Save size={13} /> {save.isPending ? 'Saving…' : 'Save'}
+            </button>
+            <button type="button" onClick={() => setEditing(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
+          </div>
+        </form>
+      ) : config ? (
+        <div className="px-6 py-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${config.isEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+              {config.isEnabled ? 'Enabled' : 'Disabled'}
+            </span>
+            <span className="text-sm text-gray-500">Microsoft Entra ID · Client ID: <code className="text-xs bg-gray-100 px-1 rounded">{config.clientId.slice(0, 8)}…</code></span>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-1.5">SSO login URL (share with your team)</p>
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg max-w-lg">
+              <span className="text-xs font-mono text-gray-600 truncate flex-1">{ssoLoginUrl}</span>
+              <button onClick={copyUrl} className="shrink-0 text-gray-400 hover:text-gray-700">
+                {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => toggle.mutate(!config.isEnabled)} disabled={toggle.isPending}
+              className={`px-3 py-1.5 text-xs rounded-lg border font-medium ${config.isEnabled ? 'border-yellow-300 text-yellow-700 hover:bg-yellow-50' : 'border-green-300 text-green-700 hover:bg-green-50'}`}>
+              {config.isEnabled ? 'Disable SSO' : 'Enable SSO'}
+            </button>
+            <button onClick={() => { if (confirm('Remove SSO configuration?')) del.mutate() }}
+              className="px-3 py-1.5 text-xs rounded-lg border border-red-200 text-red-600 hover:bg-red-50 font-medium">
+              Remove
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="px-6 py-8 text-center text-sm text-gray-400">
+          No SSO configured. Click <strong>Configure</strong> to set up Microsoft Entra ID login for your team.
+        </div>
+      )}
+    </div>
+  )
 }

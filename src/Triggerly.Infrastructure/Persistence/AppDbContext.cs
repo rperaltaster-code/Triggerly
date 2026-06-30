@@ -24,6 +24,7 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<ServiceType> ServiceTypes => Set<ServiceType>();
     public DbSet<ClientService> ClientServices => Set<ClientService>();
     public DbSet<TenantSettings> TenantSettings => Set<TenantSettings>();
+    public DbSet<TenantSsoConfig> TenantSsoConfigs => Set<TenantSsoConfig>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

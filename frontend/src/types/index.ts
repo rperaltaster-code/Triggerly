@@ -258,3 +258,18 @@ export interface AiWorkflowSuggestion {
   suggestedName: string | null
   steps: AiGeneratedStep[]
 }
+
+export interface SsoConfig {
+  id: string
+  provider: string
+  clientId: string
+  directoryTenantId: string
+  groupClaimName: string
+  groupRoleMappings: string
+  isEnabled: boolean
+}
+
+export interface SsoPublicInfo {
+  provider: string
+  isEnabled: boolean
+}
